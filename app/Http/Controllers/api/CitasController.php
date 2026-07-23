@@ -19,15 +19,15 @@ class CitasController extends Controller
     public function store(Request $request)
     {
         //
-        $cita = Citas::create($request->all());
-        return response()->json(['message' => 'Cita creada correctamente', 'cita' => $cita], 201);
+        $citas = Citas::create($request->all());
+        return response()->json(['message' => 'Cita creada correctamente', 'citas' => $citas], 201);
+
 
     }
 
 
 
-
-    public function show(string $id)
+    public function update(string $id)
     {
         //
         $cita = Citas::find($id);
