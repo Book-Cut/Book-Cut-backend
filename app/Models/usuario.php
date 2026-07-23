@@ -27,6 +27,7 @@ class usuario extends Model
     {
         return $this->belongsTo(roles::class, 'Roles_IDRol', 'iDRol');
     }
+    
 
 
 }
