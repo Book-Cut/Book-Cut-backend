@@ -3,10 +3,8 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\api\CitasController;
-
-
-
 use App\Http\Controllers\api\usuarioController;
+use App\Http\Controllers\api\perfilController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -15,3 +13,5 @@ Route::get('/user', function (Request $request) {
 Route::apiResource('/citas', CitasController::class);
 Route::apiResource('usuario', usuarioController::class);
 Route::apiResource('usuarios', usuarioController::class);
+Route::apiResource('perfil', perfilController::class);
+
