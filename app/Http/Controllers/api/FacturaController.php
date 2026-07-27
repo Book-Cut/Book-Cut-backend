@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\Controller;
@@ -22,7 +21,10 @@ class FacturaController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $factura = Factura::create($request->all());
+        $factura->load('usuario');
+
+        return response()->json($factura, 201);
     }
 
     /**
@@ -30,7 +32,13 @@ class FacturaController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $factura = Factura::with('usuario')->find($id);
+
+        if (!$factura) {
+            return response()->json(['message' => 'Factura no encontrada'], 404);
+        }
+
+        return response()->json($factura);
     }
 
     /**
@@ -38,7 +46,16 @@ class FacturaController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        $factura = Factura::find($id);
+
+        if (!$factura) {
+            return response()->json(['message' => 'Factura no encontrada'], 404);
+        }
+
+        $factura->update($request->all());
+        $factura->load('usuario');
+
+        return response()->json($factura);
     }
 
     /**
@@ -46,6 +63,14 @@ class FacturaController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        $factura = Factura::find($id);
+
+        if (!$factura) {
+            return response()->json(['message' => 'Factura no encontrada'], 404);
+        }
+
+        $factura->delete();
+
+        return response()->json(['message' => 'Factura eliminada correctamente']);
     }
 }

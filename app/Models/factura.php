@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Factura extends Model
 {
-    public $primaryKey = 'factura_id';
+    public $primaryKey = 'idfactura';
 
     public $fillable = [
         'numero_factura',
@@ -17,9 +17,23 @@ class Factura extends Model
         'metodo_pago'
     ];
 
-     public $table = 'factura';
+    public $table = 'factura';
 
     public $timestamps = false;
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($factura) {
+            $factura->numero_factura = 'TEMP';
+        });
+
+        static::created(function ($factura) {
+            $factura->numero_factura = 'FAC-' . str_pad($factura->idfactura, 3, '0', STR_PAD_LEFT);
+            $factura->save();
+        });
+    }
 
     public function usuario()
     {
