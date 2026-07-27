@@ -8,7 +8,7 @@ class usuario extends Model
 {
     //
     public $primaryKey = 'idUsuario';
-    
+    public $hidden = ['contrasenha'];
     public $fillable = [
         'Nombre',
         'correo',
@@ -18,6 +18,7 @@ class usuario extends Model
         "horario",
         'Roles_IDRol'
     ];
+
 
     public $table = 'usuario';
     
