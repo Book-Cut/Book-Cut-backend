@@ -3,18 +3,18 @@
 namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Factura;
 use Illuminate\Http\Request;
-use App\Models\usuario;
 
-class usuarioController extends Controller
+class FacturaController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        $usuarios = usuario::all();
-        return response()->json($usuarios);
+        $facturas = Factura::with('usuario')->get();
+        return response()->json($facturas);
     }
 
     /**
