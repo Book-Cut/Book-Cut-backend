@@ -11,12 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('perfil', function (Blueprint $table) {
-            $table->id('idPerfil');
-            $table->integer('Ranking')->default(0);
-            $table->string('foto_perfil', 255)->nullable();
-            $table->foreignId('Usuario_idUsuario')->references('idUsuario')->on('usuario');
-        });
+        if (!Schema::hasTable('perfil')) {
+            Schema::create('perfil', function (Blueprint $table) {
+                $table->id('idPerfil');
+                $table->integer('Ranking')->default(0);
+                $table->string('foto_perfil', 255)->nullable();
+                $table->foreignId('Usuario_idUsuario')->references('idUsuario')->on('Usuario');
+            });
+        }
     }
 
 
