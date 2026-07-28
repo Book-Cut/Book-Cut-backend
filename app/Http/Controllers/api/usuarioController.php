@@ -8,44 +8,52 @@ use App\Models\usuario;
 
 class usuarioController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+
     public function index()
     {
         $usuarios = usuario::all();
         return response()->json($usuarios);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
+
+        $usuario = usuario::create($request->all());
+        return response()->json($usuario, 201);
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(string $id)
     {
-        //
+        $usuario = usuario::find($id);
+
+        if (!$usuario) {
+            return response()->json(['message' => 'Usuario no encontrado'], 404);
+        }
+
+        return response()->json($usuario);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, string $id)
     {
-        //
+        $usuario = usuario::find($id);
+
+        if (!$usuario) {
+            return response()->json(['message' => 'Usuario no encontrado'], 404);
+        }
+
+        $usuario->update($request->all());
+        return response()->json($usuario);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(string $id)
     {
-        //
+        $usuario = usuario::find($id);
+
+        if (!$usuario) {
+            return response()->json(['message' => 'Usuario no encontrado'], 404);
+        }
+
+        $usuario->delete();
+        return response()->json(['message' => 'Usuario eliminado correctamente']);
     }
 }

@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -16,7 +15,7 @@ return new class extends Migration
             $table->string('nombre');
             $table->string('correo')->unique();
             $table->string('telefono');
-            $table->string('contrasena');
+            $table->string('contrasenha');
             $table->string('especialidad');
             $table->string('horario');
 
