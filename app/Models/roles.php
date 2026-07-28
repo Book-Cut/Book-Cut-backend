@@ -14,11 +14,9 @@ public $primaryKey = 'iDRol';
     ];
 
     public $timestamps = false;
-
-
      public function usuarios()
     {
-        return $this->hasMany(usuario::class, 'Roles_IDRol', 'iDRol');
+        return $this->hasMany(usuario::class, 'Roles_IDRol', 'iDRol'); 
     }
 }
  

@@ -13,10 +13,9 @@ return new class extends Migration {
         Schema::create('citas', function (Blueprint $table) {
             $table->id('idCita');
             $table->timestamps();
-            $table->text('estado');
+            $table->enum('estado', ['Confirmado', 'Pendiente', 'Cancelado']);
             $table->integer('Usuario_idUsuarioCli');
             $table->integer('Usuario_idUsuarioBar');
-            $table->integer('estado')->default(1);
             $table->integer('Valora_Idvalora');
             $table->integer('Servicio_idServicio');
         });
