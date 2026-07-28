@@ -22,4 +22,13 @@ class Citas extends Model
 
     public $table = 'cita';
 
+    public function servicios()
+    {
+        return $this->belongsTo(Servicio::class, 'Servicio_idServicio', 'idServicio');
+    }
+    public function getFactura()
+    {
+        return $this->hasOne(Factura::class, 'Cita_idCita', 'idCita');
+    }
+
 }

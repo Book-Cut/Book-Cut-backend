@@ -11,7 +11,7 @@ class Factura extends Model
     public $fillable = [
         'numero_factura',
         'fecha_emision',
-        'Usuario_idUsuario',
+        'Cita_idCita',
         'subtotal',
         'total_pagar',
         'metodo_pago'
@@ -35,9 +35,23 @@ class Factura extends Model
         });
     }
 
+    public function cita()
+    {
+        return $this->belongsTo(Citas::class, 'Cita_idCita', 'idCita');
+    }
+    
+
     public function usuario()
     {
-        return $this->belongsTo(usuario::class, 'Usuario_idUsuario');
+        /* define una relación uno a uno remota utilizando un modelo intermedio, conectando dos tablas que no tienen una clave foránea directa  */
+        return $this->hasOneThrough(
+            usuario::class,
+            Citas::class,
+            'idCita',
+            'idUsuario',
+            'Cita_idCita',
+            'Usuario_idUsuarioCli'
+        );
     }
 }
 

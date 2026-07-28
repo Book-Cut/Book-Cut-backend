@@ -10,7 +10,7 @@ class usuario extends Authenticatable
 {
     use HasApiTokens, Notifiable;
 
-    public $table = 'Usuario';
+    public $table = 'usuario';
     public $primaryKey = 'idUsuario';
     public $timestamps = false;
 
@@ -22,7 +22,7 @@ class usuario extends Authenticatable
         'especialidad',
         'disponibilidad',
         'horario',
-        'Roles_IDRol'
+        'roles_idrol'
     ];
 
     public function getAuthPassword()
@@ -32,6 +32,6 @@ class usuario extends Authenticatable
 
     public function rol()
     {
-        return $this->belongsTo(Roles::class, 'Roles_IDRol', 'IDRol');
+        return $this->belongsTo(roles::class, 'roles_IDRol', 'iDRol');
     }
 }

@@ -12,14 +12,16 @@ return new class extends Migration
      */
   public function up(): void
     {
-        Schema::create('facturas', function (Blueprint $table) {
-            $table->id('factura_id');
+        Schema::create('factura', function (Blueprint $table) {
+            $table->id('idfactura');
             $table->string('numero_factura', 20)->unique();
-            $table->dateTime('fecha_emision')->default(DB::raw('CURRENT_TIMESTAMP' ));
-            $table->foreignId('Usuario_idUsuario')->references('id')->on('users');
+            $table->dateTime('fecha_emision')->default(DB::raw('CURRENT_TIMESTAMP'));
             $table->decimal('subtotal', 12, 2);
             $table->decimal('total_pagar', 12, 2);
             $table->enum('metodo_pago', ['Efectivo', 'Tarjeta', 'Transferencia', 'Nequi'])->default('Efectivo');
+            $table->unsignedBigInteger('Cita_idCita');
+
+            $table->foreign('Cita_idCita')->references('idCita')->on('cita');
         });
     }
 
