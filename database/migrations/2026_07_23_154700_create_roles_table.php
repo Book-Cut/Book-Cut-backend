@@ -10,12 +10,12 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('servicio', function (Blueprint $table) {
-            $table->id('idServicio');
-            $table->text('Nombre');
-            $table->integer('Duracion');
-            $table->integer('Precio');
-        });
+        if (!Schema::hasTable('roles')) {
+            Schema::create('roles', function (Blueprint $table) {
+                $table->id('iDRol');
+                $table->string('Nombre_rol');
+            });
+        }
     }
 
     /**
@@ -23,6 +23,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('servicios');
+        Schema::dropIfExists('roles');
     }
 };
