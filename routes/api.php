@@ -7,6 +7,8 @@ use App\Http\Controllers\api\ServicioController;
 use App\Http\Controllers\api\usuarioController;
 use App\Http\Controllers\api\AuthController;
 use App\Http\Controllers\api\perfilController;
+use App\Http\Controllers\api\FacturaController;
+use App\Http\Controllers\api\horarioController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -25,4 +27,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::put('servicios/{id}', [ServicioController::class, 'update']);
 Route::delete('servicios/{id}', [ServicioController::class, 'destroy']);
+Route::apiResource('horarios', horarioController::class);
+
+
 
