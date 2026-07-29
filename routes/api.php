@@ -7,9 +7,10 @@ use App\Http\Controllers\api\ServicioController;
 use App\Http\Controllers\api\usuarioController;
 use App\Http\Controllers\api\AuthController;
 use App\Http\Controllers\api\perfilController;
+use App\Http\Controllers\api\ValoraController;
 use App\Http\Controllers\api\FacturaController;
-use App\Http\Controllers\api\horarioController;
 
+Route::post('/login', [AuthController::class, 'login']);
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
@@ -23,6 +24,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('servicios', ServicioController::class);
     Route::apiResource('facturas', FacturaController::class);
     Route::apiResource('perfil', perfilController::class);
+    Route::apiResource('valora', ValoraController::class);
 });
 
 Route::put('servicios/{id}', [ServicioController::class, 'update']);
