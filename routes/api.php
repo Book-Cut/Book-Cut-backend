@@ -28,6 +28,3 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('valora', ValoraController::class);
     Route::apiResource('horarios', horarioController::class);
 });
-
-
-d
