@@ -14,6 +14,7 @@ class usuario extends Authenticatable
     public $primaryKey = 'idUsuario';
     public $timestamps = false;
 
+    protected $hidden = ['contrasenha'];
     public $fillable = [
         'Nombre',
         'correo',
@@ -22,7 +23,7 @@ class usuario extends Authenticatable
         'especialidad',
         'disponibilidad',
         'horario',
-        'roles_idrol'
+        'Roles_IDRol'
     ];
 
     public function getAuthPassword()

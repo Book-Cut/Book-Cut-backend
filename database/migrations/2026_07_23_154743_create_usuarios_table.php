@@ -16,10 +16,10 @@ return new class extends Migration {
                 $table->text('Nombre');
                 $table->string('correo', 255)->unique();
                 $table->string('telefono', 45);
-                $table->string('contrasenha', 45);
-                $table->string('especialidad', 45);
-                $table->text('disponibilidad');
-                $table->string('horario', 45);
+                $table->string('contrasenha', 255);
+                $table->string('especialidad', 45)->nullable()->default("null");
+                $table->text('disponibilidad')->nullable()->default("null");
+                $table->string('horario', 45)->nullable()->default("null");
                 $table->unsignedBigInteger('Roles_IDRol');
 
                 $table->primary('idUsuario');

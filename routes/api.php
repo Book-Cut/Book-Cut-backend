@@ -7,18 +7,18 @@ use App\Http\Controllers\api\ServicioController;
 use App\Http\Controllers\api\usuarioController;
 use App\Http\Controllers\api\AuthController;
 use App\Http\Controllers\api\perfilController;
-use App\Http\Controllers\api\ValoraController;
 use App\Http\Controllers\api\FacturaController;
 
+
 Route::post('/login', [AuthController::class, 'login']);
-Route::get('/user', function (Request $request) {
-    return $request->user();
+Route::post('/register', [AuthController::class, 'register']);
+
 })->middleware('auth:sanctum');
+
 
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout']);
-
     Route::apiResource('usuarios', usuarioController::class);
     Route::apiResource('citas', CitasController::class);
     Route::apiResource('servicios', ServicioController::class);

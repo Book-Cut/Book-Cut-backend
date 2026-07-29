@@ -12,6 +12,7 @@ class Citas extends Model
         'idCita',
         'Fecha_hora',
         'estado',
+        "Valora_Idvalora",
         'Usuario_idUsuarioCli',
         'Usuario_idUsuarioBar',
         'Valora_Idvalora',
@@ -21,6 +22,11 @@ class Citas extends Model
     public $timestamps = false;
 
     public $table = 'cita';
+
+    public function valora()
+    {
+        return $this->belongsTo(Valora::class, 'Valora_Idvalora', 'Idvalora');
+    }
 
     public function servicios()
     {

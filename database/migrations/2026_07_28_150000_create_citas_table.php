@@ -14,7 +14,7 @@ return new class extends Migration {
             $table->id('idCita')->unsigned()->autoIncrement();
             $table->date('Fecha_hora');
             $table->enum('estado', ['Confirmado', 'Pendiente', 'Cancelado']);
-            $table->unsignedBigInteger('Valora_Idvalora');
+            $table->unsignedBigInteger('Valora_Idvalora')->nullable();
             $table->unsignedBigInteger('Servicio_idServicio');
             $table->unsignedBigInteger('Usuario_idUsuarioCli');
             $table->unsignedBigInteger('Usuario_idUsuarioBar');
