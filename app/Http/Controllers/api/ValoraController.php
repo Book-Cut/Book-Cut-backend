@@ -20,6 +20,7 @@ class ValoraController extends Controller
         //
         $valora = Valora::find($id);
         if ($valora) {
+            
             return response()->json(['message' => 'Valoración no encontrada'], 404);
         }
 
