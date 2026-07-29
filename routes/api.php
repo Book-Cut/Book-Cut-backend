@@ -29,4 +29,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::put('servicios/{id}', [ServicioController::class, 'update']);
 Route::delete('servicios/{id}', [ServicioController::class, 'destroy']);
+Route::apiResource('horarios', horarioController::class);
+
+
 
