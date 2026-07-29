@@ -5,6 +5,8 @@ namespace App\Http\Controllers\api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Citas;
+use Illuminate\Support\Facades\Auth;
+
 
 
 class CitasController extends Controller
@@ -12,8 +14,17 @@ class CitasController extends Controller
     //
     public function index()
     {
-        $citas = Citas::all();
-        return response()->json($citas);
+
+        $user = Auth::user();
+
+        if ($user->roles->Nombre_rol == 'Administrador') {
+            $citas = Citas::with('usuario')->get();
+            return response()->json($citas);
+        } else if ($user->roles->Nombre_rol == 'Cliente') {
+            $citas = Citas::with('usuario')->where('Roles_IDRol', $user->roles->id)->get();
+            return response()->json($citas);
+        }
+
     }
 
     public function store(Request $request)
@@ -24,6 +35,8 @@ class CitasController extends Controller
 
 
     }
+
+
 
 
 
