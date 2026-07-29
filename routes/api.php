@@ -13,8 +13,6 @@ use App\Http\Controllers\api\FacturaController;
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
 })->middleware('auth:sanctum');
 
 
@@ -26,8 +24,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('servicios', ServicioController::class);
     Route::apiResource('facturas', FacturaController::class);
     Route::apiResource('perfil', perfilController::class);
+    Route::apiResource('valora', ValoraController::class);
 });
 
 Route::put('servicios/{id}', [ServicioController::class, 'update']);
 Route::delete('servicios/{id}', [ServicioController::class, 'destroy']);
+Route::apiResource('horarios', horarioController::class);
+
+
 

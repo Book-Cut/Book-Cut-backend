@@ -37,4 +37,19 @@ class Citas extends Model
         return $this->hasOne(Factura::class, 'Cita_idCita', 'idCita');
     }
 
+    public function getValora()
+    {
+        return $this->belongsTo(Valora::class, 'Valora_Idvalora', 'idvalora');
+    }
+
+    public function getBarbero()
+    {
+        return $this->belongsTo(usuario::class, 'Usuario_idUsuarioBar', 'idUsuario');
+    }
+
+    public function getCliente()
+    {
+        return $this->belongsTo(usuario::class, 'Usuario_idUsuarioCli', 'idUsuario');
+    }
+
 }
