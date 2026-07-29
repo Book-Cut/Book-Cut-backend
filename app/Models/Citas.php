@@ -52,4 +52,14 @@ class Citas extends Model
         return $this->belongsTo(usuario::class, 'Usuario_idUsuarioCli', 'idUsuario');
     }
 
+    public function usuario()
+    {
+        return $this->belongsTo(usuario::class, 'Usuario_idUsuarioCli', 'idUsuario');
+    }
+
+    public function getRoles()
+    {
+        return $this->belongsTo(roles::class, 'Roles_IDRol', 'iDRol');
+    }
+
 }

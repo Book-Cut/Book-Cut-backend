@@ -16,15 +16,22 @@ class CitasController extends Controller
     {
 
         $user = Auth::user();
+        #si el rol no existe o el usuer tampoco existe
+        if (! $user || ! $user->roles) {
+            return response()->json(['message' => 'Rol no definido'], 403);
+        }
 
-        if ($user->roles->Nombre_rol == 'Administrador') {
+        if ($user->roles->Nombre_rol === 'Administrador') {
             $citas = Citas::with('usuario')->get();
-            return response()->json($citas);
-        } else if ($user->roles->Nombre_rol == 'Cliente') {
-            $citas = Citas::with('usuario')->where('Roles_IDRol', $user->roles->id)->get();
             return response()->json($citas);
         }
 
+        if ($user->roles->Nombre_rol === 'Cliente') {
+            $citas = Citas::with('usuario')->where('Usuario_idUsuarioCli', $user->idUsuario)->get();
+            return response()->json($citas);
+        }
+
+        return response()->json(['message' => 'sin permisos'], 403);
     }
 
     public function store(Request $request)
