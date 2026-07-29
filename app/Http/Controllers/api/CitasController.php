@@ -27,15 +27,17 @@ class CitasController extends Controller
 
 
 
-    public function update(string $id)
+    public function update(Request $request, string $id)
     {
         //
         $cita = Citas::find($id);
         if ($cita) {
-            return response()->json($cita);
+            $cita->update($request->all());
+            return response()->json(['message' => 'Cita actualizada correctamente', 'cita' => $cita]);
         } else {
             return response()->json(['message' => 'Cita no encontrada'], 404);
         }
+
     }
 
     public function destroy(string $id)
