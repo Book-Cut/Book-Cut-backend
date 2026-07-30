@@ -1,10 +1,13 @@
 <?php
+
 namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Factura;
 use App\Models\Citas;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
 
 class FacturaController extends Controller
 {
@@ -13,8 +16,17 @@ class FacturaController extends Controller
      */
     public function index()
     {
-        $facturas = Factura::with('cita', 'cita.servicios')->get();
-        return response()->json($facturas);
+        $user = Auth::user();
+
+        if ($user->roles->Nombre_rol === 'Administrador') {
+            $factura = Factura::with('usuario')->get();
+            return response()->json($factura);
+        }
+
+        if ($user->roles->Nombre_rol === 'Cliente') {
+            $factura = Factura::with('usuario')->where('Usuario_idUsuario', $user->idUsuario)->get();
+            return response()->json($factura);
+        }
     }
 
     /**
@@ -24,9 +36,9 @@ class FacturaController extends Controller
     {
         $id_cita = $request->Cita_idCita;
         $cita = Citas::find($id_cita);
-        if ($cita->estado==='Confirmado' && $cita->getFactura()) {
+        if ($cita->estado === 'Confirmado' && $cita->getFactura()->exists()) {
             return response()->json(['message' => 'La cita ya tiene una factura asociada'], 400);
-        } else if ($cita->estado!=='Confirmado') {
+        } else if ($cita->estado !== 'Confirmado') {
             return response()->json(['message' => 'La cita no está confirmada, no se puede generar factura'], 400);
         }
         $factura = Factura::create($request->all());

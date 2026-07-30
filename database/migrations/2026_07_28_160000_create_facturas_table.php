@@ -20,8 +20,10 @@ return new class extends Migration
             $table->decimal('total_pagar', 12, 2);
             $table->enum('metodo_pago', ['Efectivo', 'Tarjeta', 'Transferencia', 'Nequi'])->default('Efectivo');
             $table->unsignedBigInteger('Cita_idCita');
+            $table->unsignedBigInteger('Usuario_idUsuario');
 
             $table->foreign('Cita_idCita')->references('idCita')->on('cita');
+            $table->foreign('Usuario_idUsuario')->references('idUsuario')->on('usuario');
         });
     }
 
