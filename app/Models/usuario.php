@@ -31,8 +31,8 @@ class usuario extends Authenticatable
         return $this->contrasenha;
     }
 
-    public function rol()
+    public function roles()
     {
-        return $this->belongsTo(roles::class, 'roles_IDRol', 'iDRol');
+        return $this->belongsTo(roles::class, 'Roles_IDRol', 'iDRol');
     }
 }

@@ -18,5 +18,10 @@ public $primaryKey = 'iDRol';
     {
         return $this->hasMany(usuario::class, 'Roles_IDRol', 'iDRol'); 
     }
+
+    public function citas()
+    {
+        return $this->hasMany(Citas::class, 'Roles_IDRol', 'iDRol'); 
+    }
 }
  
