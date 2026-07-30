@@ -16,7 +16,6 @@ class perfilController extends Controller
 
     public function store(Request $request)
 {
-    // Cambiamos 'integer' por 'numeric'
     $request->validate([
         'Ranking' => 'nullable|numeric',
         'foto_perfil' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',

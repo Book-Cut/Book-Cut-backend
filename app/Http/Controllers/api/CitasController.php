@@ -26,6 +26,11 @@ class CitasController extends Controller
             return response()->json($citas);
         }
 
+
+
+
+
+        
         if ($user->roles->Nombre_rol === 'Cliente') {
             $citas = Citas::with('usuario')->where('Usuario_idUsuarioCli', $user->idUsuario)->get();
             return response()->json($citas);
