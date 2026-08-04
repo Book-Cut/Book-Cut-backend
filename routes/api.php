@@ -9,6 +9,7 @@ use App\Http\Controllers\api\perfilController;
 use App\Http\Controllers\api\FacturaController;
 use App\Http\Controllers\api\ValoraController;
 use App\Http\Controllers\api\horarioController;
+use App\Http\Controllers\api\BeneficiosController;
 
 
 Route::post('/login', [AuthController::class, 'login']);
@@ -27,6 +28,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('perfil', perfilController::class);
     Route::apiResource('valora', ValoraController::class);
     Route::apiResource('horarios', horarioController::class);
+
+    Route::middleware('role:1,2,3')->get('/beneficios', [BeneficiosController::class, 'index']);
+    Route::middleware('role:1,2,3')->get('/beneficios/{id}', [BeneficiosController::class, 'show']);
+    Route::middleware('role:3')->post('/beneficios', [BeneficiosController::class, 'store']);
+    Route::middleware('role:3')->put('/beneficios/{id}', [BeneficiosController::class, 'update']);
+    Route::middleware('role:3')->delete('/beneficios/{id}', [BeneficiosController::class, 'destroy']);
 });
 
 
