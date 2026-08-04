@@ -37,10 +37,8 @@ class CitasController extends Controller
     public function store(Request $request)
     {
         //
-        $citas = Citas::create($request->all());
-        return response()->json(['message' => 'Cita creada correctamente', 'citas' => $citas], 201);
-
-
+        $cita = Citas::create($request->all());
+        return response()->json($cita, 201);
     }
 
 
@@ -57,7 +55,6 @@ class CitasController extends Controller
         } else {
             return response()->json(['message' => 'Cita no encontrada'], 404);
         }
-
     }
 
     public function destroy(string $id)

@@ -14,7 +14,8 @@ class Factura extends Model
         'Cita_idCita',
         'subtotal',
         'total_pagar',
-        'metodo_pago'
+        'metodo_pago',
+        'Usuario_idUsuario'
     ];
 
     public $table = 'factura';
