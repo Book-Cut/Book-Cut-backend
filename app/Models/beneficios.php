@@ -18,6 +18,6 @@ class beneficios extends Model
 
     public $timestamps = false;
 
-    public $table = 'beneficio';
+    public $table = 'beneficios';
 
 }
