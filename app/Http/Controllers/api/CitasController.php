@@ -17,7 +17,7 @@ class CitasController extends Controller
 
         $user = Auth::user();
         #si el rol no existe o el usuer tampoco existe
-        if (! $user || ! $user->roles) {
+        if (!$user || !$user->roles) {
             return response()->json(['message' => 'Rol no definido'], 403);
         }
 
@@ -30,7 +30,7 @@ class CitasController extends Controller
 
 
 
-        
+
         if ($user->roles->Nombre_rol === 'Cliente') {
             $citas = Citas::with('usuario')->where('Usuario_idUsuarioCli', $user->idUsuario)->get();
             return response()->json($citas);
@@ -64,13 +64,19 @@ class CitasController extends Controller
 
     public function destroy(string $id)
     {
-        //
+        $user = Auth::user();
         $cita = Citas::find($id);
-        if ($cita) {
-            $cita->delete();
-            return response()->json(['message' => 'Cita eliminada']);
-        } else {
+
+        if (!$cita) {
             return response()->json(['message' => 'Cita no encontrada'], 404);
         }
+
+        // Si es cliente, verificar que la cita sea suya
+        if ($user->roles->Nombre_rol === 'Cliente' && $cita->Usuario_idUsuarioCli !== $user->idUsuario) {
+            return response()->json(['message' => 'No tienes permiso para eliminar esta cita'], 403);
+        }
+
+        $cita->delete();
+        return response()->json(['message' => 'Cita eliminada']);
     }
 }
