@@ -66,10 +66,20 @@ class FacturaController extends Controller
      */
     public function update(Request $request, string $id)
     {
+        $user = Auth::user();
+
+        if ($user->roles->Nombre_rol !== 'Administrador') {
+            return response()->json([
+                'message' => 'No tienes permisos para actualizar facturas.'
+            ], 403);
+        }
+
         $factura = Factura::find($id);
 
         if (!$factura) {
-            return response()->json(['message' => 'Factura no encontrada'], 404);
+            return response()->json([
+                'message' => 'Factura no encontrada'
+            ], 404);
         }
 
         $factura->update($request->all());
@@ -83,14 +93,26 @@ class FacturaController extends Controller
      */
     public function destroy(string $id)
     {
+        $user = Auth::user();
+
+        if ($user->roles->Nombre_rol !== 'Administrador') {
+            return response()->json([
+                'message' => 'No tienes permisos para eliminar facturas.'
+            ], 403);
+        }
+
         $factura = Factura::find($id);
 
         if (!$factura) {
-            return response()->json(['message' => 'Factura no encontrada'], 404);
+            return response()->json([
+                'message' => 'Factura no encontrada'
+            ], 404);
         }
 
         $factura->delete();
 
-        return response()->json(['message' => 'Factura eliminada correctamente']);
+        return response()->json([
+            'message' => 'Factura eliminada correctamente'
+        ]);
     }
 }

@@ -7,16 +7,12 @@ use Illuminate\Http\Request;
 use App\Models\Citas;
 use Illuminate\Support\Facades\Auth;
 
-
-
 class CitasController extends Controller
 {
-    //
     public function index()
     {
-
         $user = Auth::user();
-        #si el rol no existe o el usuer tampoco existe
+      
         if (!$user || !$user->roles) {
             return response()->json(['message' => 'Rol no definido'], 403);
         }
@@ -25,11 +21,6 @@ class CitasController extends Controller
             $citas = Citas::with('usuario')->get();
             return response()->json($citas);
         }
-
-
-
-
-
 
         if ($user->roles->Nombre_rol === 'Cliente') {
             $citas = Citas::with('usuario')->where('Usuario_idUsuarioCli', $user->idUsuario)->get();
@@ -41,37 +32,74 @@ class CitasController extends Controller
 
     public function store(Request $request)
     {
-        //
-        $cita = Citas::create($request->all());
-        return response()->json($cita, 201);
+        $user = Auth::user();
+        
+        if (!$user || !$user->roles) {
+            return response()->json(['message' => 'Rol no definido'], 403);
+        }
+
+        if ($user->roles->Nombre_rol === 'Administrador') {
+            $citas = Citas::create($request->all());
+            return response()->json($citas);
+        }
+
+        if ($user->roles->Nombre_rol === 'Cliente') {
+            $request->merge(['Usuario_idUsuarioCli' => $user->idUsuario]);
+            $citas = Citas::create($request->all());
+            return response()->json($citas);
+        }
+        
+        return response()->json(['message' => 'sin permisos'], 403);
     }
 
-
-
-
-
-    public function update(Request $request, string $id)
+    public function update(Request $request, $id)
     {
-        //
+        $user = Auth::user();
+        
+        if (!$user || !$user->roles) {
+            return response()->json(['message' => 'Rol no definido'], 403);
+        }
+      
         $cita = Citas::find($id);
-        if ($cita) {
-            $cita->update($request->all());
-            return response()->json(['message' => 'Cita actualizada correctamente', 'cita' => $cita]);
-        } else {
+        if (!$cita) {
             return response()->json(['message' => 'Cita no encontrada'], 404);
         }
+
+        if ($user->roles->Nombre_rol == 'Administrador') {
+            $cita->update($request->all());
+            return response()->json(['message' => 'Cita actualizada correctamente', 'cita' => $cita]);
+        }
+
+        if ($user->roles->Nombre_rol === 'Cliente') {
+            if ($cita->Usuario_idUsuarioCli !== $user->idUsuario) {
+                return response()->json(['message' => 'No tienes permiso para actualizar esta cita'], 403);
+            }
+
+            $cita->update($request->only([
+                'Fecha_hora',
+                'estado',
+                'barbero_idbarbero'
+            ]));
+
+            return response()->json($cita);
+        }
+
+        return response()->json(['message' => 'sin permisos'], 403);
     }
 
     public function destroy(string $id)
     {
         $user = Auth::user();
-        $cita = Citas::find($id);
+        
+        if (!$user || !$user->roles) {
+            return response()->json(['message' => 'Rol no definido'], 403);
+        }
 
+        $cita = Citas::find($id);
         if (!$cita) {
             return response()->json(['message' => 'Cita no encontrada'], 404);
         }
 
-        // Si es cliente, verificar que la cita sea suya
         if ($user->roles->Nombre_rol === 'Cliente' && $cita->Usuario_idUsuarioCli !== $user->idUsuario) {
             return response()->json(['message' => 'No tienes permiso para eliminar esta cita'], 403);
         }
