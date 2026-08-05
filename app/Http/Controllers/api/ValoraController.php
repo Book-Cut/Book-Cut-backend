@@ -11,7 +11,7 @@ class ValoraController extends Controller
     //
     public function index()
     {
-        $valoras = Valora::with('cita', 'cita.getBarbero:idUsuario,Nombre','cita.getCliente:idUsuario,Nombre')->get();
+        $valoras = Valora::with('cita', 'cita.getBarbero:idUsuario,Nombre', 'cita.getCliente:idUsuario,Nombre')->get();
         return response()->json($valoras);
     }
 
@@ -19,11 +19,9 @@ class ValoraController extends Controller
     {
         //
         $valora = Valora::find($id);
-        if ($valora) {
-            
+        if (!$valora) {
             return response()->json(['message' => 'Valoración no encontrada'], 404);
         }
-
         return response()->json($valora);
     }
 

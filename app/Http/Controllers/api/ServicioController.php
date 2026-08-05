@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Citas;
 use App\Models\Servicio;
+use Illuminate\Support\Facades\Auth;
 
 class ServicioController extends Controller
 {
@@ -14,7 +15,8 @@ class ServicioController extends Controller
      */
     public function index()
     {
-        //
+
+
         $servicios = Servicio::all();
         return response()->json($servicios);
     }
@@ -24,7 +26,14 @@ class ServicioController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $user = Auth::user();
+
+        if ($user->roles->Nombre_rol !== 'Administrador') {
+            return response()->json([
+                'message' => 'No tienes permisos para crear servicios.'
+            ], 403);
+        }
+
         $servicio = Servicio::create($request->all());
         return response()->json($servicio, 201);
     }
@@ -34,7 +43,14 @@ class ServicioController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $user = Auth::user();
+
+        if ($user->roles->Nombre_rol !== 'Administrador') {
+            return response()->json([
+                'message' => 'No tienes permisos para ver servicios.'
+            ], 403);
+        }
+
         $servicio = Servicio::find($id);
         if (!$servicio) {
             return response()->json(['message' => 'Servicio not found'], 404);
@@ -47,7 +63,14 @@ class ServicioController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        $user = Auth::user();
+
+        if ($user->roles->Nombre_rol !== 'Administrador') {
+            return response()->json([
+                'message' => 'No tienes permisos para actualizar servicios.'
+            ], 403);
+        }
+
         $servicio = Servicio::find($id);
         if (!$servicio) {
             return response()->json(['message' => 'Servicio not found'], 404);
@@ -62,6 +85,13 @@ class ServicioController extends Controller
     public function destroy(string $id)
     {
         $servicio = Servicio::find($id);
+        $user = Auth::user();
+
+        if ($user->roles->Nombre_rol !== 'Administrador') {
+            return response()->json([
+                'message' => 'No tienes permisos para eliminar servicios.'
+            ], 403);
+        }
 
         if (!$servicio) {
             return response()->json(['message' => 'Servicio not found'], 404);
