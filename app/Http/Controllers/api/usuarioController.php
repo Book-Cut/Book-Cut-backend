@@ -3,8 +3,9 @@
 namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\usuario;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class usuarioController extends Controller
 {
@@ -35,14 +36,21 @@ class usuarioController extends Controller
 
     public function update(Request $request, string $id)
     {
+        $user = Auth::user();
         $usuario = usuario::find($id);
+
+        //return response()->json(['user' => $user, 'usuario' => $usuario, 'request' => $request->all()]);
 
         if (!$usuario) {
             return response()->json(['message' => 'Usuario no encontrado'], 404);
         }
 
-        $usuario->update($request->all());
-        return response()->json($usuario);
+        if ($user->roles->Nombre_rol == 'Administrador') {
+            $usuario->update($request->all());
+            return response()->json($usuario);
+        }
+
+        return response()->json(['message' => 'No autorizado'], 403);
     }
 
     public function destroy(string $id)
