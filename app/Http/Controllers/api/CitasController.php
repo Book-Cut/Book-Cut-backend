@@ -17,7 +17,7 @@ class CitasController extends Controller
 
         $user = Auth::user();
         #si el rol no existe o el usuer tampoco existe
-        if (! $user || ! $user->roles) {
+        if (!$user || !$user->roles) {
             return response()->json(['message' => 'Rol no definido'], 403);
         }
 
@@ -27,10 +27,6 @@ class CitasController extends Controller
         }
 
 
-
-
-
-        
         if ($user->roles->Nombre_rol === 'Cliente') {
             $citas = Citas::with('usuario')->where('Usuario_idUsuarioCli', $user->idUsuario)->get();
             return response()->json($citas);
@@ -42,29 +38,81 @@ class CitasController extends Controller
     public function store(Request $request)
     {
         //
-        $cita = Citas::create($request->all());
-        return response()->json($cita, 201);
+        /* crear cliente */
+        $user = Auth::user();
+        #si el rol no existe o el usuer tampoco existe
+        if (!$user || !$user->roles) {
+            return response()->json(['message' => 'Rol no definido'], 403);
+        }
+
+        if ($user->roles->Nombre_rol === 'Administrador') {
+            $citas = Citas::create($request->all());
+            return response()->json($citas);
+        }
+
+
+        if ($user->roles->Nombre_rol === 'Cliente') {
+            $request->merge(['Usuario_idUsuarioCli' => $user->idUsuario]);
+            //return response()->json($request->all());
+            $citas = Citas::create($request->all());
+            return response()->json($citas);
+        }
+
+
+
     }
 
 
-
-
-
-    public function update(Request $request, string $id)
+    public function update(Request $request, $id)
     {
         //
-        $cita = Citas::find($id);
-        if ($cita) {
+        $user = Auth::user();
+        #si el rol no existe o el usuer tampoco existe
+        if (!$user || !$user->roles) {
+            return response()->json(['message' => 'Rol no definido'], 403);
+        }
+
+        if ($user->roles->Nombre_rol == 'Administrador') {
+            $cita = Citas::findOrFail($id);
             $cita->update($request->all());
             return response()->json(['message' => 'Cita actualizada correctamente', 'cita' => $cita]);
         } else {
             return response()->json(['message' => 'Cita no encontrada'], 404);
         }
+
+
+
+        if ($user->roles->Nombre_rol === 'Cliente') {
+
+            $cita = Citas::findOrFail($id);
+
+            $cita->update($request->only([
+                'Fecha_hora',
+                'estado',
+                'barbero_idbarbero'
+            ]));
+
+            return response()->json($cita);
+        }
+
+
+
+
     }
 
     public function destroy(string $id)
     {
         //
+        $user = Auth::user();
+        #si el rol no existe o el usuer tampoco existe
+        if (!$user || !$user->roles) {
+            return response()->json(['message' => 'Rol no definido'], 403);
+        }
+
+        if ($user->roles->Nombre_rol !== 'Administrador') {
+            return response()->json(['message' => 'sin permisos'], 403);
+        }
+
         $cita = Citas::find($id);
         if ($cita) {
             $cita->delete();
