@@ -48,9 +48,9 @@ class BeneficiosController extends Controller
     public function show(string $id)
     {
         //
-        $beneficio = beneficios::find($id);
-        if ($beneficio) {
-            return response()->json($beneficio);
+        $beneficios = beneficios::find($id);
+        if ($beneficios) {
+            return response()->json($beneficios);
         } else {
             return response()->json(['message' => 'Beneficio no encontrado'], 404);
         }
@@ -73,10 +73,10 @@ class BeneficiosController extends Controller
             ], 403);
         }
 
-        $beneficio = beneficios::find($id);
-        if ($beneficio) {
-            $beneficio->update($request->all());
-            return response()->json(['message' => 'Beneficio actualizado correctamente', 'beneficio' => $beneficio]);
+        $beneficios = beneficios::find($id);
+        if ($beneficios) {
+            $beneficios->update($request->all());
+            return response()->json(['message' => 'Beneficio actualizado correctamente', 'beneficios' => $beneficios]);
         } else {
             return response()->json(['message' => 'Beneficio no encontrado'], 404);
         }
@@ -99,9 +99,9 @@ class BeneficiosController extends Controller
             ], 403);
         }
 
-        $beneficio = beneficios::find($id);
-        if ($beneficio) {
-            $beneficio->delete();
+        $beneficios = beneficios::find($id);
+        if ($beneficios) {
+            $beneficios->delete();
             return response()->json(['message' => 'Beneficio eliminado correctamente']);
         } else {
             return response()->json(['message' => 'Beneficio no encontrado'], 404);
