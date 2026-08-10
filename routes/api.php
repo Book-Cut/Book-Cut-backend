@@ -30,6 +30,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('horarios', horarioController::class);
     Route::apiResource('beneficios', BeneficiosController::class);
     Route::apiResource("horario", horarioController::class);
+
+    Route::middleware('role:1,2,3')->get('/perfil', [perfilController::class, 'index']);
+    Route::middleware('role:1,2,3')->get('/perfil/{id}', [perfilController::class, 'show']);
+    Route::middleware('role:3')->post('/perfil', [perfilController::class, 'store']);
+    Route::middleware('role:3')->put('/perfil/{id}', [perfilController::class, 'update']);
+    Route::middleware('role:3')->delete('/perfil/{id}', [perfilController::class, 'destroy']);
+
+    Route::middleware('role:1,2,3')->get('/beneficios', [BeneficiosController::class, 'index']);
+    Route::middleware('role:1,2,3')->get('/beneficios/{id}', [BeneficiosController::class, 'show']);
+    Route::middleware('role:3')->post('/beneficios', [BeneficiosController::class, 'store']);
+    Route::middleware('role:3')->put('/beneficios/{id}', [BeneficiosController::class, 'update']);
+    Route::middleware('role:3')->delete('/beneficios/{id}', [BeneficiosController::class, 'destroy']);
 });
+
 
 
