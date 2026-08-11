@@ -52,7 +52,7 @@ class FacturaController extends Controller
      */
     public function show(string $id)
     {
-        $factura = Factura::with('usuario')->find($id);
+        $factura = Factura::with(['usuario', 'cita', 'servicio'])->find($id);
 
         if (!$factura) {
             return response()->json(['message' => 'Factura no encontrada'], 404);
