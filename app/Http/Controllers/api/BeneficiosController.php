@@ -38,6 +38,14 @@ class BeneficiosController extends Controller
             ], 403);
         }
 
+         $request->validate([
+            'titulo' => 'required',
+            'Tipo_beneficio' => 'required',
+            'Fecha_inicio' => 'required|date',
+            'Fecha_fin' => 'required|date|after_or_equal:Fecha_inicio',
+            'Usuario_idUsuario' => 'required',
+        ]);
+
         $beneficios = beneficios::create($request->all());
         return response()->json(['message' => 'Beneficio creado correctamente', 'beneficios' => $beneficios], 201);
     }
@@ -72,6 +80,14 @@ class BeneficiosController extends Controller
                 'message' => 'No tienes permisos para actualizar beneficios.'
             ], 403);
         }
+
+        $request->validate([
+            'titulo' => 'required',
+            'Tipo_beneficio' => 'required',
+            'Fecha_inicio' => 'required|date',
+            'Fecha_fin' => 'required|date|after_or_equal:Fecha_inicio',
+            'Usuario_idUsuario' => 'required',
+        ]);
 
         $beneficios = beneficios::find($id);
         if ($beneficios) {
