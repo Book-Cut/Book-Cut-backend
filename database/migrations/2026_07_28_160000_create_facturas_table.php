@@ -20,10 +20,14 @@ return new class extends Migration {
             $table->enum('metodo_pago', ['Efectivo', 'Tarjeta', 'Transferencia', 'Nequi'])->default('Efectivo');
             $table->unsignedBigInteger('Cita_idCita');
             $table->unsignedBigInteger('Usuario_idUsuario');
+            $table->unsignedBigInteger('Servicio_idServicio');
 
             $table->foreign('Cita_idCita')->references('idCita')->on('cita');
             $table->foreign('Usuario_idUsuario')->references('idUsuario')->on('usuario');
+            $table->foreign('Servicio_idServicio')->references('idServicio')->on('servicio');
         });
+
+
     }
 
     /**
