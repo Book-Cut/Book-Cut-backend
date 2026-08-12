@@ -40,7 +40,7 @@ class Factura extends Model
     {
         return $this->belongsTo(Citas::class, 'Cita_idCita', 'idCita');
     }
-    
+
 
     public function usuario()
     {
