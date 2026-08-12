@@ -5,6 +5,7 @@ namespace App\Http\Controllers\api;
 use App\Http\Controllers\Controller;
 use App\Models\Factura;
 use App\Models\Citas;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -34,6 +35,40 @@ class FacturaController extends Controller
      */
     public function store(Request $request)
     {
+        $validator = \Validator::make($request->all(), [
+
+            'numero_factura' => 'required|unique:factura,numero_factura',
+            'fecha_emision' => 'required|date',
+            'Cita_idCita' => 'required|exists:cita,idCita',
+            'subtotal' => 'required|numeric|min:0',
+            'total_pagar' => 'required|numeric|min:0',
+            'metodo_pago' => 'required|in:Efectivo,Tarjeta,Transferencia,Nequi',
+            //'Usuario_idUsuario' => 'required|exists:usuario,idUsuario'//
+
+        ], [
+            'numero_factura.required' => 'El número de factura es obligatorio',
+            'numero_factura.unique' => 'El número de factura ya existe',
+            'fecha_emision.required' => 'La fecha de emisión es obligatoria',
+            'fecha_emision.date' => 'La fecha de emisión debe ser una fecha válida',
+            'Cita_idCita.required' => 'El ID de la cita es obligatorio',
+            'Cita_idCita.exists' => 'El ID de la cita no existe en la tabla citas',
+            'subtotal.required' => 'El subtotal es obligatorio',
+            'subtotal.numeric' => 'El subtotal debe ser un número',
+            'subtotal.min' => 'El subtotal debe ser mayor o igual a 0',
+            'total_pagar.required' => 'El total a pagar es obligatorio',
+            'total_pagar.numeric' => 'El total a pagar debe ser un número',
+            'total_pagar.min' => 'El total a pagar debe ser mayor o igual a 0',
+            'metodo_pago.required' => 'El método de pago es obligatorio',
+            'metodo_pago.in' => 'El método de pago debe ser uno de los siguientes valores: Efectivo, Tarjeta, Transferencia, Nequi',
+            'Usuario_idUsuario.required' => 'El ID del usuario es obligatorio',
+            'Usuario_idUsuario.exists' => 'El ID del usuario no existe en la tabla usuario',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Error de validación', 'errors' => $validator->errors()], 422);
+        }
+
+
         $id_cita = $request->Cita_idCita;
         $cita = Citas::find($id_cita);
         if ($cita->estado === 'Confirmado' && $cita->getFactura()->exists()) {
@@ -66,6 +101,37 @@ class FacturaController extends Controller
      */
     public function update(Request $request, string $id)
     {
+        $validator = Validator::make($request->all(), [
+            'numero_factura' => 'sometimes|required|unique:factura,numero_factura,' . $id . ',idfactura',
+            'fecha_emision' => 'sometimes|required|date',
+            'Cita_idCita' => 'sometimes|required|exists:cita,idCita',
+            'subtotal' => 'sometimes|required|numeric|min:0',
+            'total_pagar' => 'sometimes|required|numeric|min:0',
+            'metodo_pago' => 'sometimes|required|in:Efectivo,Tarjeta,Transferencia,Nequi',
+            'Usuario_idUsuario' => 'sometimes|required|exists:usuario,idUsuario'
+        ], [
+            'numero_factura.required' => 'El número de factura es obligatorio',
+            'numero_factura.unique' => 'El número de factura ya existe',
+            'fecha_emision.required' => 'La fecha de emisión es obligatoria',
+            'fecha_emision.date' => 'La fecha de emisión debe ser una fecha válida',
+            'Cita_idCita.required' => 'El ID de la cita es obligatorio',
+            'Cita_idCita.exists' => 'El ID de la cita no existe en la tabla citas',
+            'subtotal.required' => 'El subtotal es obligatorio',
+            'subtotal.numeric' => 'El subtotal debe ser un número',
+            'subtotal.min' => 'El subtotal debe ser mayor o igual a 0',
+            'total_pagar.required' => 'El total a pagar es obligatorio',
+            'total_pagar.numeric' => 'El total a pagar debe ser un número',
+            'total_pagar.min' => 'El total a pagar debe ser mayor o igual a 0',
+            'metodo_pago.required' => 'El método de pago es obligatorio',
+            'metodo_pago.in' => 'El método de pago debe ser uno de los siguientes valores: Efectivo, Tarjeta, Transferencia, Nequi',
+            'Usuario_idUsuario.required' => 'El ID del usuario es obligatorio',
+            'Usuario_idUsuario.exists' => 'El ID del usuario no existe en la tabla usuario'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
         $user = Auth::user();
 
         if ($user->roles->Nombre_rol !== 'Administrador') {

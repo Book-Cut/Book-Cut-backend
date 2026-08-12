@@ -35,4 +35,20 @@ class usuario extends Authenticatable
     {
         return $this->belongsTo(roles::class, 'Roles_IDRol', 'iDRol');
     }
+
+    public function barbero()
+    {
+        return $this->hasMany(Citas::class, 'Usuario_idUsuarioBar', 'idUsuario');
+    }
+
+    public function cliente()
+    {
+        return $this->hasMany(Citas::class, 'Usuario_idUsuarioCli', 'idUsuario');
+    }
+
+    public function citas()
+    {
+        return $this->hasMany(Citas::class, 'Usuario_idUsuarioCli', 'idUsuario');
+    }
+
 }

@@ -42,11 +42,6 @@ class Factura extends Model
         return $this->belongsTo(Citas::class, 'Cita_idCita', 'idCita');
     }
 
-     public function servicio()
-    {
-        return $this->belongsTo(Servicio::class, 'Servicio_idServicio', 'idServicio');
-    }
-    
 
     public function usuario()
     {
