@@ -12,7 +12,7 @@ class Citas extends Model
     public $timestamps = false;
 
     public $fillable = [
-        'Fecha_hora', 
+        'Fecha_hora',
         'estado',
         'Valora_Idvalora',
         'Usuario_idUsuarioCli',
@@ -28,7 +28,7 @@ class Citas extends Model
 
     public function servicios()
     {
-        return $this->belongsTo(Servicio::class, 'Servicio_idServicio', 'idServicio');
+        return $this->belongsToMany(Servicio::class, 'cita_servicio', 'idCita', 'idServicio');
     }
     public function getFactura()
     {
