@@ -24,6 +24,7 @@ class Factura extends Model
         'total_pagar' => 'float',
         'Cita_idCita' => 'integer',
         'Usuario_idUsuario' => 'integer',
+        'Servicio_idServicio' => 'integer',
     ];
 
     public $table = 'factura';
@@ -49,6 +50,10 @@ class Factura extends Model
         return $this->belongsTo(Citas::class, 'Cita_idCita', 'idCita');
     }
 
+    public function servicio()
+    {
+        return $this->belongsTo(Servicio::class, 'Servicio_idServicio', 'idServicio');
+    }
 
     public function usuario()
     {

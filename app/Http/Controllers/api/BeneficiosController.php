@@ -38,7 +38,9 @@ class BeneficiosController extends Controller
             ], 403);
         }
 
-         $request->validate([
+         $request
+         
+         ->validate([
             'titulo' => 'required',
             'Tipo_beneficio' => 'required',
             'Fecha_inicio' => 'required|date',
