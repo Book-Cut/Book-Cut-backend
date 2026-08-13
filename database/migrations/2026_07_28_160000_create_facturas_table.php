@@ -13,12 +13,13 @@ return new class extends Migration {
             $table->dateTime('fecha_emision');
             $table->decimal('subtotal', 12, 2);
             $table->decimal('total_pagar', 12, 2);
-            $table->enum('metodo_pago', ['Efectivo', 'Nequi', 'Tarjeta', 'Transferencia']);
+            $table->enum('metodo_pago', ['Efectivo', 'Nequi', 'Tarjeta', 'Transferencia', 'Pendiente_Pago'])->default('Pendiente_Pago');
+            $table->enum('estado_factura', ['Emitida', 'Anulada', 'Pagada'])->default('Emitida');
             $table->unsignedBigInteger('Cita_idCita');
             $table->unsignedBigInteger('Usuario_idUsuario');
 
-            $table->foreign('Cita_idCita')->references('idCita')->on('cita')->onDelete('cascade');
-            $table->foreign('Usuario_idUsuario')->references('idUsuario')->on('Usuario')->onDelete('cascade');
+            $table->foreign('Cita_idCita')->references('idCita')->on('cita');
+            $table->foreign('Usuario_idUsuario')->references('idUsuario')->on('Usuario');
         });
     }
 

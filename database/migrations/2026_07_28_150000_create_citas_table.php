@@ -15,9 +15,9 @@ return new class extends Migration {
             $table->unsignedBigInteger('Usuario_idUsuarioCli');
             $table->unsignedBigInteger('Usuario_idUsuarioBar');
 
-            $table->foreign('Valora_Idvalora')->references('Idvalora')->on('valora')->onDelete('set null');
-            $table->foreign('Usuario_idUsuarioCli')->references('idUsuario')->on('Usuario')->onDelete('cascade');
-            $table->foreign('Usuario_idUsuarioBar')->references('idUsuario')->on('Usuario')->onDelete('cascade');
+            $table->foreign('Valora_Idvalora')->references('Idvalora')->on('valora');
+            $table->foreign('Usuario_idUsuarioCli')->references('idUsuario')->on('Usuario');
+            $table->foreign('Usuario_idUsuarioBar')->references('idUsuario')->on('Usuario');
         });
     }
 
