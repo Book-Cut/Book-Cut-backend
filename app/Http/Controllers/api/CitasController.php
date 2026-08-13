@@ -19,8 +19,8 @@ class CitasController extends Controller
             return response()->json(['message' => 'Rol no definido'], 403);
         }
 
-        
-        $query = Citas::with(['usuario', 'servicios']);
+       
+        $query = Citas::with(['cliente', 'barbero', 'servicios']);
 
         if ($user->roles->Nombre_rol === 'Administrador') {
             $citas = $query->get();
@@ -84,34 +84,22 @@ class CitasController extends Controller
 
     public function update(Request $request, $id)
     {
+
         $validator = Validator::make($request->all(), [
             'Fecha_hora' => 'sometimes|required|date',
             'estado' => 'sometimes|required|in:Confirmado,Pendiente,Cancelado',
-            'Valora_Idvalora' => 'sometimes|exists:valora,idValora,default:null',
+            'Valora_Idvalora' => 'sometimes|nullable|exists:valora,Idvalora',
             'Usuario_idUsuarioCli' => 'sometimes|required|exists:usuario,idUsuario',
             'Usuario_idUsuarioBar' => 'sometimes|required|exists:usuario,idUsuario',
-            'Servicio_idServicio' => 'sometimes|required|exists:servicio,idServicio',
-        ], [
-            'Fecha_hora.required' => 'La fecha y hora es obligatoria',
-            'Fecha_hora.date' => 'La fecha y hora debe ser una fecha válida',
-            'estado.required' => 'El estado es obligatorio',
-            'estado.enum' => 'El estado debe ser uno de los siguientes valores: Confirmado, Pendiente, Cancelado',
-            'Valora_Idvalora.exists' => 'El valor ingresado no existe en la tabla valora',
-            'Usuario_idUsuarioCli.required' => 'El ID del usuario cliente es obligatorio',
-            'Usuario_idUsuarioCli.exists' => 'El ID del usuario cliente no existe en la tabla usuario',
-            'Usuario_idUsuarioBar.required' => 'El ID del usuario barbero es obligatorio',
-            'Usuario_idUsuarioBar.exists' => 'El ID del usuario barbero no existe en la tabla usuario',
-            'Servicio_idServicio.required' => 'El ID del servicio es obligatorio',
-            'Servicio_idServicio.exists' => 'El ID del servicio no existe en la tabla servicio',
+            'servicios' => 'sometimes|required|array|min:1',
+            'servicios.*' => 'exists:servicio,idServicio',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['message' => 'Error de validación', 'errors' => $validator->errors()], 422);
         }
 
-
         $user = Auth::user();
-
         if (!$user || !$user->roles) {
             return response()->json(['message' => 'Rol no definido'], 403);
         }
@@ -121,26 +109,42 @@ class CitasController extends Controller
             return response()->json(['message' => 'Cita no encontrada'], 404);
         }
 
-        if ($user->roles->Nombre_rol == 'Administrador') {
-            $cita->update($request->all());
-            return response()->json(['message' => 'Cita actualizada correctamente', 'cita' => $cita]);
+
+        if ($user->roles->Nombre_rol === 'Cliente' && $cita->Usuario_idUsuarioCli !== $user->idUsuario) {
+            return response()->json(['message' => 'No tienes permiso para actualizar esta cita'], 403);
         }
 
-        if ($user->roles->Nombre_rol === 'Cliente') {
-            if ($cita->Usuario_idUsuarioCli !== $user->idUsuario) {
-                return response()->json(['message' => 'No tienes permiso para actualizar esta cita'], 403);
+        try {
+            DB::beginTransaction();
+
+            if ($user->roles->Nombre_rol === 'Administrador') {
+
+                $cita->update($request->except(['servicios']));
+            } elseif ($user->roles->Nombre_rol === 'Cliente') {
+
+                $cita->update($request->only([
+                    'Fecha_hora',
+                    'estado',
+                    'Usuario_idUsuarioBar'
+                ]));
             }
 
-            $cita->update($request->only([
-                'Fecha_hora',
-                'estado',
-                'barbero_idbarbero'
-            ]));
+            // 2. Ejecutar la sincronización N:M en la tabla pivote de manera segura
+            if ($request->has('servicios')) {
+                $cita->servicios()->sync($request->input('servicios'));
+            }
 
-            return response()->json($cita);
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Cita actualizada correctamente',
+                'cita' => $cita->load('servicios')
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Error crítico al actualizar', 'error' => $e->getMessage()], 500);
         }
-
-        return response()->json(['message' => 'sin permisos'], 403);
     }
 
     public function destroy(string $id)
