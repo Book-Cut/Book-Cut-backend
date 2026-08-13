@@ -12,11 +12,11 @@ return new class extends Migration {
             $table->unsignedBigInteger('idCita');
             $table->unsignedBigInteger('idServicio');
 
+            
+            $table->dateTime('fecha_hora_servicio')->nullable();
+
             $table->foreign('idCita')->references('idCita')->on('cita')->onDelete('cascade');
             $table->foreign('idServicio')->references('idServicio')->on('servicio')->onDelete('cascade');
-            
-            // Garantizar que no se duplique exactamente el mismo servicio dentro de la misma cita
-            $table->unique(['idCita', 'idServicio']);
         });
     }
 

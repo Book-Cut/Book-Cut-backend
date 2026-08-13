@@ -10,7 +10,6 @@ class Citas extends Model
     public $primaryKey = 'idCita';
     public $timestamps = false;
 
-    
     public $fillable = [
         'Fecha_hora',
         'estado',
@@ -19,9 +18,12 @@ class Citas extends Model
         'Usuario_idUsuarioBar',
     ];
 
+    
     public function servicios()
     {
-        return $this->belongsToMany(Servicio::class, 'cita_servicio', 'idCita', 'idServicio');
+        
+        return $this->belongsToMany(Servicio::class, 'cita_servicio', 'idCita', 'idServicio')
+                    ->withPivot('fecha_hora_servicio');
     }
 
     public function valora()
@@ -29,9 +31,9 @@ class Citas extends Model
         return $this->belongsTo(Valora::class, 'Valora_Idvalora', 'Idvalora');
     }
 
-    public function factura()
+    public function cliente()
     {
-        return $this->hasOne(Factura::class, 'Cita_idCita', 'idCita');
+        return $this->belongsTo(usuario::class, 'Usuario_idUsuarioCli', 'idUsuario');
     }
 
     public function barbero()
@@ -39,8 +41,8 @@ class Citas extends Model
         return $this->belongsTo(usuario::class, 'Usuario_idUsuarioBar', 'idUsuario');
     }
 
-    public function cliente()
+    public function factura()
     {
-        return $this->belongsTo(usuario::class, 'Usuario_idUsuarioCli', 'idUsuario');
+        return $this->hasOne(factura::class, 'Cita_idCita', 'idCita');
     }
 }

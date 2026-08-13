@@ -19,6 +19,13 @@ class Factura extends Model
         'Servicio_idServicio',
     ];
 
+    protected $casts = [
+        'subtotal' => 'float',
+        'total_pagar' => 'float',
+        'Cita_idCita' => 'integer',
+        'Usuario_idUsuario' => 'integer',
+    ];
+
     public $table = 'factura';
 
     public $timestamps = false;
@@ -45,7 +52,7 @@ class Factura extends Model
 
     public function usuario()
     {
-        /* define una relación uno a uno remota utilizando un modelo intermedio, conectando dos tablas que no tienen una clave foránea directa  */
+        
         return $this->hasOneThrough(
             usuario::class,
             Citas::class,

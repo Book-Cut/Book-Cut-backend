@@ -5,9 +5,12 @@ namespace App\Http\Controllers\api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Citas;
+use App\Models\Servicio;
+use App\Models\factura;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class CitasController extends Controller
 {
@@ -19,17 +22,20 @@ class CitasController extends Controller
             return response()->json(['message' => 'Rol no definido'], 403);
         }
 
-       
-        $query = Citas::with(['cliente', 'barbero', 'servicios']);
+
+        $query = Citas::with([
+            'cliente:idUsuario,Nombre,correo,telefono',
+            'barbero:idUsuario,Nombre,correo,telefono,especialidad',
+            'servicios',
+            'factura'
+        ]);
 
         if ($user->roles->Nombre_rol === 'Administrador') {
-            $citas = $query->get();
-            return response()->json($citas, 200);
+            return response()->json($query->get(), 200);
         }
 
         if ($user->roles->Nombre_rol === 'Cliente') {
-            $citas = $query->where('Usuario_idUsuarioCli', $user->idUsuario)->get();
-            return response()->json($citas, 200);
+            return response()->json($query->where('Usuario_idUsuarioCli', $user->idUsuario)->get(), 200);
         }
 
         return response()->json(['message' => 'sin permisos'], 403);
@@ -40,10 +46,13 @@ class CitasController extends Controller
 
         $validator = Validator::make($request->all(), [
             'Fecha_hora' => 'required|date',
-            'estado' => 'required|in:Confirmado,Pendiente,Cancelado',
             'Usuario_idUsuarioBar' => 'required|exists:usuario,idUsuario',
-            'servicios' => 'required|array|min:1', // Exigir array
-            'servicios.*' => 'exists:servicio,idServicio',
+            'Usuario_idUsuarioCli' => 'nullable|exists:usuario,idUsuario',
+            'es_continuo' => 'required|boolean',
+            'servicios' => 'required|array|min:1',
+            'servicios.*.idServicio' => 'required|exists:servicio,idServicio',
+            'servicios.*.fecha_hora_servicio' => 'required_if:es_continuo,false|nullable|date',
+            'metodo_pago' => 'required|in:Efectivo,Nequi,Tarjeta,Transferencia,Pendiente_Pago',
         ]);
 
         if ($validator->fails()) {
@@ -55,44 +64,68 @@ class CitasController extends Controller
             return response()->json(['message' => 'Rol no definido'], 403);
         }
 
-
-        $dataCita = [
-            'Fecha_hora' => $request->input('Fecha_hora'),
-            'estado' => $request->input('estado'),
-            'Usuario_idUsuarioBar' => $request->input('Usuario_idUsuarioBar'),
-            'Usuario_idUsuarioCli' => $user->roles->Nombre_rol === 'Cliente'
-                ? $user->idUsuario
-                : $request->input('Usuario_idUsuarioCli', $user->idUsuario),
-        ];
+        $idCliente = $user->roles->Nombre_rol === 'Cliente'
+            ? $user->idUsuario
+            : $request->input('Usuario_idUsuarioCli', $user->idUsuario);
 
         try {
             DB::beginTransaction();
 
-            $cita = Citas::create($dataCita);
+
+            $cita = Citas::create([
+                'Fecha_hora' => $request->input('Fecha_hora'),
+                'estado' => 'Confirmado',
+                'Valora_Idvalora' => null,
+                'Usuario_idUsuarioCli' => $idCliente,
+                'Usuario_idUsuarioBar' => $request->input('Usuario_idUsuarioBar'),
+            ]);
 
 
-            $cita->servicios()->attach($request->input('servicios'));
+            $serviciosInput = $request->input('servicios');
+            $pivotData = [];
+            $totalPagar = 0;
+
+            foreach ($serviciosInput as $srv) {
+                $servicioModel = Servicio::find($srv['idServicio']);
+                $totalPagar += $servicioModel->Precio;
+
+                $pivotData[$srv['idServicio']] = [
+                    'fecha_hora_servicio' => $request->input('es_continuo') ? null : $srv['fecha_hora_servicio']
+                ];
+            }
+
+            $cita->servicios()->attach($pivotData);
+
+
+            $factura = factura::create([
+                'numero_factura' => 'FAC-' . strtoupper(Str::random(8)),
+                'fecha_emision' => now(),
+                'subtotal' => $totalPagar,
+                'total_pagar' => $totalPagar,
+                'metodo_pago' => $request->input('metodo_pago', 'Pendiente_Pago'),
+                'estado_factura' => 'Emitida',
+                'Cita_idCita' => $cita->idCita,
+                'Usuario_idUsuario' => $idCliente,
+            ]);
 
             DB::commit();
 
-            return response()->json($cita->load('servicios'), 201);
+            return response()->json($cita->load(['cliente', 'barbero', 'servicios', 'factura']), 201);
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Error crítico al agendar', 'error' => $e->getMessage()], 500);
+            return response()->json(['message' => 'Error al crear la cita y factura', 'error' => $e->getMessage()], 500);
         }
     }
 
     public function update(Request $request, $id)
     {
-
         $validator = Validator::make($request->all(), [
             'Fecha_hora' => 'sometimes|required|date',
             'estado' => 'sometimes|required|in:Confirmado,Pendiente,Cancelado',
-            'Valora_Idvalora' => 'sometimes|nullable|exists:valora,Idvalora',
-            'Usuario_idUsuarioCli' => 'sometimes|required|exists:usuario,idUsuario',
             'Usuario_idUsuarioBar' => 'sometimes|required|exists:usuario,idUsuario',
             'servicios' => 'sometimes|required|array|min:1',
-            'servicios.*' => 'exists:servicio,idServicio',
+            'servicios.*.idServicio' => 'required_with:servicios|exists:servicio,idServicio',
         ]);
 
         if ($validator->fails()) {
@@ -100,71 +133,61 @@ class CitasController extends Controller
         }
 
         $user = Auth::user();
-        if (!$user || !$user->roles) {
-            return response()->json(['message' => 'Rol no definido'], 403);
-        }
-
         $cita = Citas::find($id);
+
         if (!$cita) {
             return response()->json(['message' => 'Cita no encontrada'], 404);
         }
 
-
         if ($user->roles->Nombre_rol === 'Cliente' && $cita->Usuario_idUsuarioCli !== $user->idUsuario) {
-            return response()->json(['message' => 'No tienes permiso para actualizar esta cita'], 403);
+            return response()->json(['message' => 'Sin autorización'], 403);
         }
 
         try {
             DB::beginTransaction();
 
-            if ($user->roles->Nombre_rol === 'Administrador') {
+            $dataToUpdate = $request->only(['Usuario_idUsuarioBar', 'estado']);
 
-                $cita->update($request->except(['servicios']));
-            } elseif ($user->roles->Nombre_rol === 'Cliente') {
-
-                $cita->update($request->only([
-                    'Fecha_hora',
-                    'estado',
-                    'Usuario_idUsuarioBar'
-                ]));
+            if ($request->has('Fecha_hora') && $request->input('Fecha_hora') !== $cita->Fecha_hora) {
+                $dataToUpdate['Fecha_hora'] = $request->input('Fecha_hora');
+                $dataToUpdate['estado'] = 'Pendiente';
             }
 
-            // 2. Ejecutar la sincronización N:M en la tabla pivote de manera segura
+            if (isset($dataToUpdate['estado']) && $dataToUpdate['estado'] === 'Cancelado') {
+                if ($cita->factura) {
+                    $cita->factura->update(['estado_factura' => 'Anulada']);
+                }
+            }
+
+            $cita->update($dataToUpdate);
+
+            
             if ($request->has('servicios')) {
-                $cita->servicios()->sync($request->input('servicios'));
+                $idsServicios = array_column($request->input('servicios'), 'idServicio');
+                $cita->servicios()->sync($idsServicios);
+
+                
+                $nuevoTotal = Servicio::whereIn('idServicio', $idsServicios)->sum('Precio');
+
+                
+                if ($cita->factura) {
+                    $cita->factura->update([
+                        'subtotal' => $nuevoTotal,
+                        'total_pagar' => $nuevoTotal
+                    ]);
+                }
             }
 
             DB::commit();
 
             return response()->json([
-                'message' => 'Cita actualizada correctamente',
-                'cita' => $cita->load('servicios')
+                'message' => 'Cita y factura recalculadas correctamente',
+                'cita' => $cita->load(['cliente', 'barbero', 'servicios', 'factura'])
             ], 200);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Error crítico al actualizar', 'error' => $e->getMessage()], 500);
+            return response()->json(['message' => 'Error al actualizar cita', 'error' => $e->getMessage()], 500);
         }
-    }
-
-    public function destroy(string $id)
-    {
-        $user = Auth::user();
-
-        if (!$user || !$user->roles) {
-            return response()->json(['message' => 'Rol no definido'], 403);
-        }
-
-        $cita = Citas::find($id);
-        if (!$cita) {
-            return response()->json(['message' => 'Cita no encontrada'], 404);
-        }
-
-        if ($user->roles->Nombre_rol === 'Cliente' && $cita->Usuario_idUsuarioCli !== $user->idUsuario) {
-            return response()->json(['message' => 'No tienes permiso para eliminar esta cita'], 403);
-        }
-
-        $cita->delete();
-        return response()->json(['message' => 'Cita eliminada']);
     }
 }
