@@ -35,7 +35,7 @@ class FacturaController extends Controller
      */
     public function store(Request $request)
     {
-        $validator = \Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
 
             'numero_factura' => 'required|unique:factura,numero_factura',
             'fecha_emision' => 'required|date',
@@ -85,7 +85,7 @@ class FacturaController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show($id)
     {
         $factura = Factura::with(['usuario', 'cita', 'servicio'])->find($id);
 
@@ -93,7 +93,7 @@ class FacturaController extends Controller
             return response()->json(['message' => 'Factura no encontrada'], 404);
         }
 
-        return response()->json($factura);
+        return response()->json($factura, 200);
     }
 
     /**
