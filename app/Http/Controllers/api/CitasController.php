@@ -134,6 +134,9 @@ class CitasController extends Controller
 
         $user = Auth::user();
         $cita = Citas::find($id);
+        $cita->load(['cliente', 'barbero', 'servicios', 'factura']);
+
+        //return response()->json(['cita' => $cita], 200);
 
         if (!$cita) {
             return response()->json(['message' => 'Cita no encontrada'], 404);
@@ -148,28 +151,31 @@ class CitasController extends Controller
 
             $dataToUpdate = $request->only(['Usuario_idUsuarioBar', 'estado']);
 
+            //return response()->json(['dataToUpdate' => $dataToUpdate], 200);
+
             if ($request->has('Fecha_hora') && $request->input('Fecha_hora') !== $cita->Fecha_hora) {
                 $dataToUpdate['Fecha_hora'] = $request->input('Fecha_hora');
                 $dataToUpdate['estado'] = 'Pendiente';
             }
 
-            if (isset($dataToUpdate['estado']) && $dataToUpdate['estado'] === 'Cancelado') {
+            if (isset($dataToUpdate['estado']) && $dataToUpdate['estado'] == 'Cancelado') {
                 if ($cita->factura) {
                     $cita->factura->update(['estado_factura' => 'Anulada']);
+                    return response()->json(['message' => 'Cita y factura canceladas correctamente'], 200);
                 }
             }
 
             $cita->update($dataToUpdate);
 
-            
+
             if ($request->has('servicios')) {
                 $idsServicios = array_column($request->input('servicios'), 'idServicio');
                 $cita->servicios()->sync($idsServicios);
 
-                
+
                 $nuevoTotal = Servicio::whereIn('idServicio', $idsServicios)->sum('Precio');
 
-                
+
                 if ($cita->factura) {
                     $cita->factura->update([
                         'subtotal' => $nuevoTotal,
@@ -181,7 +187,7 @@ class CitasController extends Controller
             DB::commit();
 
             return response()->json([
-                'message' => 'Cita y factura recalculadas correctamente',
+                'message' => 'Cita y factura editados correctamente',
                 'cita' => $cita->load(['cliente', 'barbero', 'servicios', 'factura'])
             ], 200);
 
