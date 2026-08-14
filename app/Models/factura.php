@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class Factura extends Model
 {
     public $primaryKey = 'idfactura';
+    public $table = 'factura';
+    public $timestamps = false;
+
 
     public $fillable = [
         'numero_factura',
@@ -16,20 +19,16 @@ class Factura extends Model
         'total_pagar',
         'metodo_pago',
         'Usuario_idUsuario',
-        'Servicio_idServicio',
     ];
+
 
     protected $casts = [
         'subtotal' => 'float',
         'total_pagar' => 'float',
         'Cita_idCita' => 'integer',
         'Usuario_idUsuario' => 'integer',
-        'Servicio_idServicio' => 'integer',
     ];
 
-    public $table = 'factura';
-
-    public $timestamps = false;
 
     protected static function boot()
     {
@@ -45,19 +44,14 @@ class Factura extends Model
         });
     }
 
+
     public function cita()
     {
         return $this->belongsTo(Citas::class, 'Cita_idCita', 'idCita');
     }
 
-    public function servicio()
-    {
-        return $this->belongsTo(Servicio::class, 'Servicio_idServicio', 'idServicio');
-    }
-
     public function usuario()
     {
-        
         return $this->hasOneThrough(
             usuario::class,
             Citas::class,
@@ -68,5 +62,3 @@ class Factura extends Model
         );
     }
 }
-
-

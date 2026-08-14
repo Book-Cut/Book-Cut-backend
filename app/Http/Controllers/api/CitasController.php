@@ -98,7 +98,7 @@ class CitasController extends Controller
 
 
             $factura = factura::create([
-                'numero_factura' => 'FAC-' . strtoupper(Str::random(8)),
+                'numero_factura' => 'TEMP',
                 'fecha_emision' => now(),
                 'subtotal' => $totalPagar,
                 'total_pagar' => $totalPagar,
@@ -110,7 +110,7 @@ class CitasController extends Controller
 
             DB::commit();
 
-            return response()->json($cita->load(['cliente', 'barbero', 'servicios', 'factura']), 201);
+            return response()->json($cita->load(['cliente', 'barbero', 'servicios', 'factura.cita.servicios']), 201);
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -188,7 +188,7 @@ class CitasController extends Controller
 
             return response()->json([
                 'message' => 'Cita y factura editados correctamente',
-                'cita' => $cita->load(['cliente', 'barbero', 'servicios', 'factura'])
+                'cita' => $cita->load(['cliente', 'barbero', 'servicios', 'factura.cita.servicios'])
             ], 200);
 
         } catch (\Exception $e) {
