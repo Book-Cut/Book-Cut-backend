@@ -28,9 +28,10 @@ class DatabaseSeeder extends Seeder
             Cita_servicioSeeder::class,
             facturaSeeder::class,
             notificacionSeeder::class,
+            BarberoServicioSeeder::class,
 
-            
-            
+
+
 
 
 
