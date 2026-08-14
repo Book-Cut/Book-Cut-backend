@@ -46,7 +46,8 @@ class perfilController extends Controller
 
         return response()->json([
             'message' => 'Perfil creado correctamente',
-            'perfil' => $perfil
+            'perfil' => $perfil,
+            'foto_url' => $perfil->foto_perfil ? asset('storage/' . $perfil->foto_perfil) : null
         ], 201);
     }
 
@@ -92,7 +93,10 @@ class perfilController extends Controller
         }
 
         $perfil->update($data);
-        return response()->json(['message' => 'Perfil actualizado correctamente', 'perfil' => $perfil]);
+        return response()->json([
+        'message' => 'Perfil actualizado correctamente', 'perfil' => $perfil,
+        'foto_url' => $perfil->foto_perfil ? asset('storage/' . $perfil->foto_perfil) : null
+        ]); 
     }
 
     public function destroy(string $id)
