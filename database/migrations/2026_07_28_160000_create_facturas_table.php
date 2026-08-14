@@ -17,11 +17,10 @@ return new class extends Migration {
             $table->enum('estado_factura', ['Emitida', 'Anulada', 'Pagada'])->default('Emitida');
             $table->unsignedBigInteger('Cita_idCita');
             $table->unsignedBigInteger('Usuario_idUsuario');
-            $table->unsignedBigInteger('Servicio_idServicio');
 
+            // foranea de Servicio_idServicio eliminada
             $table->foreign('Cita_idCita')->references('idCita')->on('cita');
             $table->foreign('Usuario_idUsuario')->references('idUsuario')->on('Usuario');
-            $table->foreign('Servicio_idServicio')->references('idServicio')->on('servicio');
         });
     }
 
