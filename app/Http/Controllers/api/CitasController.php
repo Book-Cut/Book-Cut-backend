@@ -134,7 +134,7 @@ class CitasController extends Controller
 
         $user = Auth::user();
         $cita = Citas::find($id);
-        $cita->load(['cliente', 'barbero', 'servicios', 'factura']);
+        $cita->load(['cliente', 'cliente.roles', 'barbero', 'servicios', 'factura']);
 
         //return response()->json(['cita' => $cita], 200);
 
@@ -158,10 +158,12 @@ class CitasController extends Controller
                 $dataToUpdate['estado'] = 'Pendiente';
             }
 
-            if (isset($dataToUpdate['estado']) && $dataToUpdate['estado'] == 'Cancelado') {
+            if (isset($dataToUpdate['estado']) && $dataToUpdate['estado'] === 'Cancelado') {
                 if ($cita->factura) {
-                    $cita->factura->update(['estado_factura' => 'Anulada']);
-                    return response()->json(['message' => 'Cita y factura canceladas correctamente'], 200);
+                    $cita->factura()->update(['estado_factura' => 'Anulada']);
+                    /*$cita->factura->estado_factura = 'Anulada';
+                    $cita->factura->save();*/
+                    //return response()->json(['message' => 'Cita y factura canceladas correctamente', 'Factura' => $cita->factura], 200);
                 }
             }
 

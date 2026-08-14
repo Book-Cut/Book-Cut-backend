@@ -14,11 +14,13 @@ class Factura extends Model
     public $fillable = [
         'numero_factura',
         'fecha_emision',
-        'Cita_idCita',
         'subtotal',
         'total_pagar',
         'metodo_pago',
+        'estado_factura',
+        'Cita_idCita',
         'Usuario_idUsuario',
+
     ];
 
 
