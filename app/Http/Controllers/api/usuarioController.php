@@ -38,10 +38,19 @@ class usuarioController extends Controller
                     //  'citas' => $citas
                 ]
             ]);
-            //}
 
 
 
+
+        }
+        if ($user->roles->Nombre_rol === 'Barbero') {
+            $barbero = usuario::where('idUsuario', $user->idUsuario)->get(['Nombre', 'Especialidad', 'Horario']);
+            return response()->json([
+                'result' => 'ok',
+                'data' => [
+                    'barbero' => $barbero
+                ]
+            ]);
         } else {
             return response()->json(['result' => 'error', 'message' => 'sin permisos'], 403);
         }
@@ -56,10 +65,10 @@ class usuarioController extends Controller
             'correo' => 'required|string|max:255|unique:usuario,Correo',
             'telefono' => 'required|string|max:45',
             'contrasenha' => 'required|string|min:6',
-            'especialidad' => 'nullable|string|max:45',
-            'disponibilidad' => 'nullable|string|max:45',
-            'horario' => 'nullable|string|max:45',
-            'Roles_IDRol' => 'required|exists:roles,idRol'
+            'Roles_IDRol' => 'required|exists:roles,idRol',
+
+            'servicios' => 'sometimes|array',
+            'servicios.*' => 'exists:servicios,idServicio'
         ], [
             'Nombre.required' => 'El campo Nombre es obligatorio.',
             'correo.required' => 'El campo correo es obligatorio.',
@@ -74,6 +83,21 @@ class usuarioController extends Controller
         if ($validator->fails()) {
             return response()->json(['message' => 'Error de validación', 'errors' => $validator->errors()], 422);
         }
+
+
+        $datos = $request->all();
+        $datos['contrasenha'] = bcrypt($datos['contrasenha']);
+
+
+        $usuario = usuario::create($datos);
+
+
+        if ($usuario->Roles_IDRol == 2 && $request->has('servicios')) {
+            $usuario->especialidades()->attach($request->servicios);
+        }
+
+        return response()->json($usuario->load('especialidades'), 201);
+
 
 
 
@@ -118,48 +142,49 @@ class usuarioController extends Controller
 
     public function update(Request $request, string $id)
     {
-        $user = Auth::user();
-        /*$user = usuario::find($id);
+        $usuario = usuario::find($id);
 
-
-        if ($user->roles->Nombre_rol === 'Administrador') {
-            $user->update($request->all());
-            return response()->json(['message' => 'Usuario actualizado correctamente', 'usuario' => $user]);
-        } else {
-            return response()->json(['message' => 'No tienes permisos para actualizar este usuario'], 403);
-        }*/
-
-        $user = usuario::find($id);
-        if (!$user) {
+        if (!$usuario) {
             return response()->json(['message' => 'Usuario no encontrado'], 404);
         }
+
         $validator = Validator::make($request->all(), [
             'Nombre' => 'required|string',
-            'correo' => 'sometimes|required|string|max:255|unique:usuario,Correo,' . $user->idUsuario . ',idUsuario',
+            'correo' => 'sometimes|required|string|max:255|unique:usuario,Correo,' . $usuario->idUsuario . ',idUsuario',
             'telefono' => 'required|string|max:45',
-            'contrasenha' => 'required|string|min:6',
-            'especialidad' => 'nullable|string|max:45',
-            'disponibilidad' => 'nullable|string|max:45',
-            'horario' => 'nullable|string|max:45',
-            'Roles_IDRol' => 'sometimes|required|exists:roles,idRol'
-        ], [
-            'Nombre.required' => 'El campo Nombre es obligatorio.',
-            'correo.required' => 'El campo correo es obligatorio.',
-            'correo.unique' => 'El correo ya está en uso.',
-            'telefono.required' => 'El campo telefono es obligatorio.',
-            'contrasenha.required' => 'El campo contrasenha es obligatorio.',
-            'contrasenha.min' => 'La contrasenha debe tener al menos 6 caracteres.',
-            'Roles_IDRol.required' => 'El campo Roles_IDRol es obligatorio.',
-            'Roles_IDRol.exists' => 'El rol seleccionado no es válido.'
+            'contrasenha' => 'sometimes|string|min:6',
+            'Roles_IDRol' => 'sometimes|required|exists:roles,idRol',
+
+            'servicios' => 'sometimes|array',
+            'servicios.*' => 'exists:servicios,idServicio'
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $user->update($request->all());
-        return response()->json(['message' => 'Usuario actualizado correctamente', 'usuario' => $user]);
+        $datos = $request->all();
 
+
+        if ($request->filled('contrasenha')) {
+            $datos['contrasenha'] = bcrypt($datos['contrasenha']);
+        } else {
+            unset($datos['contrasenha']);
+        }
+
+
+        $usuario->update($datos);
+
+
+        if ($usuario->Roles_IDRol == 2 && $request->has('servicios')) {
+
+            $usuario->especialidades()->sync($request->servicios);
+        }
+
+        return response()->json([
+            'message' => 'Usuario actualizado correctamente',
+            'usuario' => $usuario->load('especialidades')
+        ]);
     }
 
     public function destroy(string $id)

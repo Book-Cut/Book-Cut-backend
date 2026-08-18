@@ -47,7 +47,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:1')->post('/facturas', [FacturaController::class, 'store']);
     Route::middleware('role:1')->put('/facturas/{id}', [FacturaController::class, 'update']);
     Route::middleware('role:1')->delete('/facturas/{id}', [FacturaController::class, 'destroy']);
+
+
 });
-
-
-
