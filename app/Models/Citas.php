@@ -18,12 +18,12 @@ class Citas extends Model
         'Usuario_idUsuarioBar',
     ];
 
-    
+
     public function servicios()
     {
-        
+
         return $this->belongsToMany(Servicio::class, 'cita_servicio', 'idCita', 'idServicio')
-                    ->withPivot('fecha_hora_servicio');
+            ->withPivot('fecha_hora_servicio');
     }
 
     public function valora()
@@ -38,11 +38,21 @@ class Citas extends Model
 
     public function barbero()
     {
-        return $this->belongsTo(usuario::class, 'Usuario_idUsuarioBar', 'idUsuario');
+        return $this->belongsTo(Usuario::class, 'Usuario_idUsuarioBar', 'idUsuario');
     }
 
     public function factura()
     {
         return $this->hasOne(factura::class, 'Cita_idCita', 'idCita');
+    }
+
+    public function getBarbero()
+    {
+        return $this->barbero();
+    }
+
+    public function getCliente()
+    {
+        return $this->cliente();
     }
 }
