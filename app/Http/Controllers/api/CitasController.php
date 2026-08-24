@@ -19,7 +19,7 @@ class CitasController extends Controller
         $user = Auth::user();
 
         if (!$user || !$user->roles) {
-            return response()->json(['message' => 'Rol no definido'], 403);
+            return response()->json(['result' => 'error', 'message' => 'Rol no definido'], 403);
         }
 
 
@@ -38,7 +38,7 @@ class CitasController extends Controller
             return response()->json($query->where('Usuario_idUsuarioCli', $user->idUsuario)->get(), 200);
         }
 
-        return response()->json(['message' => 'sin permisos'], 403);
+        return response()->json(['result' => 'error', 'message' => 'sin permisos'], 403);
     }
 
     public function store(Request $request)
@@ -53,15 +53,32 @@ class CitasController extends Controller
             'servicios.*.idServicio' => 'required|exists:servicio,idServicio',
             'servicios.*.fecha_hora_servicio' => 'required_if:es_continuo,false|nullable|date',
             'metodo_pago' => 'required|in:Efectivo,Nequi,Tarjeta,Transferencia,Pendiente_Pago',
+        ], [
+            'Fecha_hora.required' => 'El campo Fecha_hora es obligatorio.',
+            'Fecha_hora.date' => 'El campo Fecha_hora debe ser una fecha válida.',
+            'Usuario_idUsuarioBar.required' => 'El campo Usuario_idUsuarioBar es obligatorio.',
+            'Usuario_idUsuarioBar.exists' => 'El barbero seleccionado no existe.',
+            'Usuario_idUsuarioCli.exists' => 'El cliente seleccionado no existe.',
+            'es_continuo.required' => 'El campo es_continuo es obligatorio.',
+            'es_continuo.boolean' => 'El campo es_continuo debe ser verdadero o falso.',
+            'servicios.required' => 'Debe seleccionar al menos un servicio.',
+            'servicios.array' => 'El campo servicios debe ser un arreglo.',
+            'servicios.min' => 'Debe seleccionar al menos un servicio.',
+            'servicios.*.idServicio.required' => 'Cada servicio debe tener un idServicio válido.',
+            'servicios.*.idServicio.exists' => 'Uno de los servicios seleccionados no existe.',
+            'servicios.*.fecha_hora_servicio.required_if' => 'La fecha y hora del servicio es obligatoria cuando es_continuo es falso.',
+            'servicios.*.fecha_hora_servicio.date' => 'La fecha y hora del servicio debe ser una fecha válida.',
+            'metodo_pago.required' => 'El campo metodo_pago es obligatorio.',
+            'metodo_pago.in' => 'El metodo_pago debe ser uno de los siguientes: Efectivo, Nequi, Tarjeta, Transferencia, Pendiente_Pago.'
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Error de validación', 'errors' => $validator->errors()], 422);
+            return response()->json(['result' => 'error', 'message' => 'Error de validación', 'errors' => $validator->errors()], 422);
         }
 
         $user = Auth::user();
         if (!$user || !$user->roles) {
-            return response()->json(['message' => 'Rol no definido'], 403);
+            return response()->json(['result' => 'error', 'message' => 'Rol no definido'], 403);
         }
 
         $idCliente = $user->roles->Nombre_rol === 'Cliente'
@@ -114,7 +131,7 @@ class CitasController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Error al crear la cita y factura', 'error' => $e->getMessage()], 500);
+            return response()->json(['result' => 'error', 'message' => 'Error al crear la cita y factura', 'error' => $e->getMessage()], 500);
         }
     }
 
@@ -126,10 +143,22 @@ class CitasController extends Controller
             'Usuario_idUsuarioBar' => 'sometimes|required|exists:usuario,idUsuario',
             'servicios' => 'sometimes|required|array|min:1',
             'servicios.*.idServicio' => 'required_with:servicios|exists:servicio,idServicio',
+        ], [
+            'Fecha_hora.required' => 'El campo Fecha_hora es obligatorio.',
+            'Fecha_hora.date' => 'El campo Fecha_hora debe ser una fecha válida.',
+            'estado.required' => 'El campo estado es obligatorio.',
+            'estado.in' => 'El estado debe ser uno de los siguientes: Confirmado, Pendiente, Cancelado.',
+            'Usuario_idUsuarioBar.required' => 'El campo Usuario_idUsuarioBar es obligatorio.',
+            'Usuario_idUsuarioBar.exists' => 'El barbero seleccionado no existe.',
+            'servicios.required' => 'Debe seleccionar al menos un servicio.',
+            'servicios.array' => 'El campo servicios debe ser un arreglo.',
+            'servicios.min' => 'Debe seleccionar al menos un servicio.',
+            'servicios.*.idServicio.required_with' => 'Cada servicio debe tener un idServicio válido.',
+            'servicios.*.idServicio.exists' => 'Uno de los servicios seleccionados no existe.',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Error de validación', 'errors' => $validator->errors()], 422);
+            return response()->json(['result' => 'error', 'message' => 'Error de validación', 'errors' => $validator->errors()], 422);
         }
 
         $user = Auth::user();
@@ -139,11 +168,11 @@ class CitasController extends Controller
         //return response()->json(['cita' => $cita], 200);
 
         if (!$cita) {
-            return response()->json(['message' => 'Cita no encontrada'], 404);
+            return response()->json(['result' => 'error', 'message' => 'Cita no encontrada'], 404);
         }
 
         if ($user->roles->Nombre_rol === 'Cliente' && $cita->Usuario_idUsuarioCli !== $user->idUsuario) {
-            return response()->json(['message' => 'Sin autorización'], 403);
+            return response()->json(['result' => 'error', 'message' => 'Sin autorización'], 403);
         }
 
         try {
@@ -195,7 +224,7 @@ class CitasController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Error al actualizar cita', 'error' => $e->getMessage()], 500);
+            return response()->json(['result' => 'error', 'message' => 'Error al actualizar cita', 'error' => $e->getMessage()], 500);
         }
     }
 }
