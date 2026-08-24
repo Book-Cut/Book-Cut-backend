@@ -10,6 +10,7 @@ class Servicio extends Model
     public $primaryKey = 'idServicio';
 
     public $fillable = [
+        'foto_perfil',
         'Nombre',
         'Duracion',
         'Precio',
