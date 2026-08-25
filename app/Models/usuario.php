@@ -17,7 +17,7 @@ class usuario extends Authenticatable
     protected $hidden = ['contrasenha'];
     public $fillable = [
         'Nombre',
-        'correo',
+        'Correo',
         'telefono',
         'contrasenha',
         'especialidad',
