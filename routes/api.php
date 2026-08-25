@@ -1,22 +1,18 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\api\AuthController;
+use App\Http\Controllers\api\BeneficiosController;
 use App\Http\Controllers\api\CitasController;
+use App\Http\Controllers\api\FacturaController;
+use App\Http\Controllers\api\horarioController;
+use App\Http\Controllers\api\perfilController;
 use App\Http\Controllers\api\ServicioController;
 use App\Http\Controllers\api\usuarioController;
-use App\Http\Controllers\api\AuthController;
-use App\Http\Controllers\api\perfilController;
-use App\Http\Controllers\api\FacturaController;
 use App\Http\Controllers\api\ValoraController;
-use App\Http\Controllers\api\horarioController;
-use App\Http\Controllers\api\BeneficiosController;
-
+use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
-
-
-
 
 Route::middleware('auth:sanctum')->group(function () {
 
@@ -28,7 +24,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('perfil', perfilController::class);
     Route::apiResource('valora', ValoraController::class);
     Route::apiResource('beneficios', BeneficiosController::class);
-    Route::apiResource("horario", horarioController::class);
+    Route::apiResource('horario', horarioController::class);
 
     Route::middleware('role:1,2,3')->get('/perfil', [perfilController::class, 'index']);
     Route::middleware('role:1,2,3')->get('/perfil/{id}', [perfilController::class, 'show']);
@@ -47,6 +43,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:1')->post('/facturas', [FacturaController::class, 'store']);
     Route::middleware('role:1')->put('/facturas/{id}', [FacturaController::class, 'update']);
     Route::middleware('role:1')->delete('/facturas/{id}', [FacturaController::class, 'destroy']);
-
 
 });

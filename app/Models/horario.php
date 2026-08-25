@@ -8,13 +8,13 @@ class horario extends Model
 {
     //
     public $primaryKey = 'idhorario';
+
     public $fillable = [
         'idhorario',
         'diasemana',
         'horainicio',
         'horafin',
     ];
-
 
     public $timestamps = false;
 
@@ -24,10 +24,4 @@ class horario extends Model
     {
         return $this->hasMany(Servicio::class, 'idhorario');
     }
-
-
-
-
-
-
 }

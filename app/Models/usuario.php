@@ -11,10 +11,13 @@ class usuario extends Authenticatable
     use HasApiTokens, Notifiable;
 
     public $table = 'usuario';
+
     public $primaryKey = 'idUsuario';
+
     public $timestamps = false;
 
     protected $hidden = ['contrasenha'];
+
     public $fillable = [
         'Nombre',
         'correo',
@@ -23,7 +26,7 @@ class usuario extends Authenticatable
         'especialidad',
         'disponibilidad',
         'horario',
-        'Roles_IDRol'
+        'Roles_IDRol',
     ];
 
     public function getAuthPassword()
@@ -56,4 +59,8 @@ class usuario extends Authenticatable
         return $this->belongsToMany(Servicio::class, 'barbero_servicio_table', 'Usuario_idUsuarioBar', 'idServicio');
     }
 
+    public function horario()
+    {
+        return $this->belongsToMany(horario::class, 'barbero_has_horario', 'Usuario_idUsuarioBar', 'horario_idhorario');
+    }
 }
