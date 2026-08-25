@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -13,10 +12,10 @@ return new class extends Migration
     {
         Schema::create('valora', function (Blueprint $table) {
             $table->id('Idvalora')->unsigned()->autoIncrement();
-            $table->integer('Evaluacion_(Barbero)_idEvaluacion_Bar')->unsigned();
-            $table->integer('Evaluacion_(Cliente)_idEvaluacion_cli')->unsigned();
-            $table->string('Fecha_evaluacion_bar', 45);
-            $table->string('Fecha_evaluacion_cli', 45);
+            $table->integer('EvaluacionBar')->unsigned();
+            $table->integer('EvaluacionCita')->unsigned();
+            $table->dateTime('Fecha_evaluacion_bar')->useCurrent();
+            $table->dateTime('Fecha_evaluacion_cita');
         });
     }
 

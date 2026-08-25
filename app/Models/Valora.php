@@ -23,4 +23,5 @@ class Valora extends Model
     {
         return $this->hasOne(Citas::class, 'Valora_Idvalora', 'Idvalora');
     }
+
 }

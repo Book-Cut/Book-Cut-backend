@@ -30,6 +30,8 @@ class AuthController extends Controller
         $token = $user->createToken('book_cut_api')->plainTextToken;
 
         return response()->json([
+            'result' => 'ok',
+            'message' => 'Usuario registrado exitosamente',
             'user' => $user,
             'token' => $token
         ], 201);
@@ -46,11 +48,11 @@ class AuthController extends Controller
         $user = usuario::where('correo', $request->correo)->first();
 
         if (!$user) {
-            return response()->json(['message' => 'Credenciales inválidas'], 401);
+            return response()->json(['result' => 'error', 'message' => 'Credenciales inválidas'], 401);
         }
 
         if ($request->contrasenha !== $user->contrasenha && !Hash::check($request->contrasenha, $user->contrasenha)) {
-            return response()->json(['message' => 'Credenciales inválidas'], 401);
+            return response()->json(['result' => 'error', 'message' => 'Credenciales inválidas'], 401);
         }
 
         if ($user->tokens()->exists() && $user->tokens()->where('name', 'book_cut_api')->exists()) {
@@ -60,6 +62,8 @@ class AuthController extends Controller
         $token = $user->createToken('book_cut_api')->plainTextToken;
 
         return response()->json([
+            'result' => 'ok',
+            'message' => 'Usuario autenticado exitosamente',
             'user' => $user,
             'token' => $token
         ], 200);
@@ -70,6 +74,6 @@ class AuthController extends Controller
 
         $request->user()->currentAccessToken()->delete();
 
-        return response()->json(['message' => 'Sesión cerrada exitosamente'], 200);
+        return response()->json(['result' => 'ok', 'message' => 'Sesión cerrada exitosamente'], 200);
     }
 }

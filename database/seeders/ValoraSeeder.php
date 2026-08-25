@@ -15,22 +15,22 @@ class ValoraSeeder extends Seeder
         //
         \DB::table('valora')->insert([
             [
-                'Evaluacion_(Barbero)_idEvaluacion_Bar' => 5,
-                'Evaluacion_(Cliente)_idEvaluacion_cli' => 4,
-                'Fecha_evaluacion_bar' => '2026-07-20',
-                'Fecha_evaluacion_cli' => '2026-07-20',
+                'EvaluacionBar' => 5,
+                'EvaluacionCita' => 4,
+                'Fecha_evaluacion_bar' => '2026-07-20 10:00:00',
+                'Fecha_evaluacion_cita' => '2026-07-20 10:00:00',
             ],
             [
-                'Evaluacion_(Barbero)_idEvaluacion_Bar' => 5,
-                'Evaluacion_(Cliente)_idEvaluacion_cli' => 5,
-                'Fecha_evaluacion_bar' => '2026-07-21',
-                'Fecha_evaluacion_cli' => '2026-07-21',
+                'EvaluacionBar' => 5,
+                'EvaluacionCita' => 5,
+                'Fecha_evaluacion_bar' => '2026-07-21 10:00:00',
+                'Fecha_evaluacion_cita' => '2026-07-21 10:00:00',
             ],
             [
-                'Evaluacion_(Barbero)_idEvaluacion_Bar' => 4,
-                'Evaluacion_(Cliente)_idEvaluacion_cli' => 3,
-                'Fecha_evaluacion_bar' => '2026-07-22',
-                'Fecha_evaluacion_cli' => '2026-07-22',
+                'EvaluacionBar' => 4,
+                'EvaluacionCita' => 3,
+                'Fecha_evaluacion_bar' => '2026-07-22 10:00:00',
+                'Fecha_evaluacion_cita' => '2026-07-22 10:00:00',
             ],
         ]);
     }

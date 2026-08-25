@@ -18,7 +18,7 @@ class ServicioController extends Controller
 
 
         $servicios = Servicio::all();
-        return response()->json($servicios);
+        return response()->json(['result' => 'ok', 'message' => 'Servicios obtenidos correctamente', 'data' => $servicios]);
     }
 
     /**
@@ -30,12 +30,13 @@ class ServicioController extends Controller
 
         if ($user->roles->Nombre_rol !== 'Administrador') {
             return response()->json([
+                'result' => 'error',
                 'message' => 'No tienes permisos para crear servicios.'
             ], 403);
         }
 
         $servicio = Servicio::create($request->all());
-        return response()->json($servicio, 201);
+        return response()->json(['result' => 'ok', 'message' => 'Servicio creado correctamente', 'data' => $servicio], 201);
     }
 
     /**
@@ -47,15 +48,16 @@ class ServicioController extends Controller
 
         if ($user->roles->Nombre_rol !== 'Administrador') {
             return response()->json([
+                'result' => 'error',
                 'message' => 'No tienes permisos para ver servicios.'
             ], 403);
         }
 
         $servicio = Servicio::find($id);
         if (!$servicio) {
-            return response()->json(['message' => 'Servicio not found'], 404);
+            return response()->json(['result' => 'error', 'message' => 'Servicio not found'], 404);
         }
-        return response()->json($servicio);
+        return response()->json(['result' => 'ok', 'data' => $servicio]);
     }
 
     /**
@@ -67,16 +69,17 @@ class ServicioController extends Controller
 
         if ($user->roles->Nombre_rol !== 'Administrador') {
             return response()->json([
+                'result' => 'error',
                 'message' => 'No tienes permisos para actualizar servicios.'
             ], 403);
         }
 
         $servicio = Servicio::find($id);
         if (!$servicio) {
-            return response()->json(['message' => 'Servicio not found'], 404);
+            return response()->json(['result' => 'error', 'message' => 'Servicio not found'], 404);
         }
         $servicio->update($request->all());
-        return response()->json($servicio);
+        return response()->json(['result' => 'ok', 'message' => 'Servicio actualizado correctamente', 'data' => $servicio]);
     }
 
     /**
@@ -89,25 +92,26 @@ class ServicioController extends Controller
 
         if ($user->roles->Nombre_rol !== 'Administrador') {
             return response()->json([
+                'result' => 'error',
                 'message' => 'No tienes permisos para eliminar servicios.'
             ], 403);
         }
 
         if (!$servicio) {
-            return response()->json(['message' => 'Servicio not found'], 404);
+            return response()->json(['result' => 'error', 'message' => 'Servicio not found'], 404);
         }
 
         $existeEnCita = Citas::where('Servicio_idServicio', $servicio->idServicio)->exists();
 
         if ($existeEnCita) {
             return response()->json(
-                ['message' => 'No se puede eliminar el servicio porque existe en una cita'],
+                ['result' => 'error', 'message' => 'No se puede eliminar el servicio porque existe en una cita'],
                 409
             );
         }
 
         $servicio->delete();
 
-        return response()->json(['message' => 'Servicio deleted']);
+        return response()->json(['result' => 'ok', 'message' => 'Servicio deleted']);
     }
 }

@@ -16,35 +16,38 @@ class usuarioController extends Controller
         $user = $request->user();
 
         if (!$user || !$user->roles) {
-            return response()->json(['message' => 'Rol no definido'], 403);
+            return response()->json(['result' => 'error', 'message' => 'Rol no definido'], 403);
         }
 
         if ($user->roles->Nombre_rol === 'Administrador') {
-            return response()->json(usuario::all());
+            return response()->json(['result' => 'ok', 'data' => usuario::all()]);
         }
 
         if ($user->roles->Nombre_rol === 'Cliente') {
-            //return response()->json(usuario::where('idUsuario', $user->idUsuario)->get());
 
-            #nombre, espcialidad y horario de los barberos, y el nombre del cliente que agendo la cita
-
-            //if ($user->roles->Nombre_rol === 'Cliente') {
             $barberos = usuario::where('roles_idRol', 2)->get(['Nombre', 'Especialidad', 'Horario']);
-            // $citas = $user->citas()->with('getBarbero:idUsuario,Nombre')->get();
+
             return response()->json([
                 'result' => 'ok',
                 'data' => [
-                    'barberos' => $barberos//,
-                    //  'citas' => $citas
+                    'barberos' => $barberos
                 ]
             ]);
-            //}
 
 
-
+        }
+        if ($user->roles->Nombre_rol === 'Barbero') {
+            $barbero = usuario::where('idUsuario', $user->idUsuario)->get(['Nombre', 'Especialidad', 'Horario']);
+            return response()->json([
+                'result' => 'ok',
+                'data' => [
+                    'barbero' => $barbero
+                ]
+            ]);
         } else {
             return response()->json(['result' => 'error', 'message' => 'sin permisos'], 403);
         }
+
 
 
     }
@@ -56,11 +59,8 @@ class usuarioController extends Controller
             'correo' => 'required|string|max:255|unique:usuario,Correo',
             'telefono' => 'required|string|max:45',
             'contrasenha' => 'required|string|min:6',
-            'especialidad' => 'nullable|string|max:45',
-            'disponibilidad' => 'nullable|string|max:45',
-            'horario' => 'nullable|string|max:45',
             'Roles_IDRol' => 'required|exists:roles,idRol',
-            'terminos_aceptados' => 'required|accepted'
+             'servicio' => 'sometimes|array'
         ], [
             'Nombre.required' => 'El campo Nombre es obligatorio.',
             'correo.required' => 'El campo correo es obligatorio.',
@@ -72,11 +72,25 @@ class usuarioController extends Controller
             'Roles_IDRol.exists' => 'El rol seleccionado no es válido.',
             'terminos_aceptados.required' => 'Debes aceptar los términos y condiciones.',
             'terminos_aceptados.accepted' => 'Debes aceptar los términos y condiciones.',
+            'servicio.*' => 'exists:servicio,idServicio'
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Error de validación', 'errors' => $validator->errors()], 422);
+            return response()->json(['result' => 'error', 'message' => 'Error de validación', 'errors' => $validator->errors()], 422);
         }
+
+        $datos = $request->all();
+        $datos['contrasenha'] = bcrypt($datos['contrasenha']);
+
+        $usuario = usuario::create($datos);
+
+
+        if ($usuario->Roles_IDRol == 2 && $request->has('servicios')) {
+            $usuario->especialidades()->attach($request->servicios);
+        }
+
+        return response()->json($usuario->load('especialidades'), 201);
+
 
 
 
@@ -85,16 +99,16 @@ class usuarioController extends Controller
         return response()->json($usuario, 201);
 
         if (!$user || !$user->roles) {
-            return response()->json(['message' => 'Rol no definido'], 403);
+            return response()->json(['result' => 'error', 'message' => 'Rol no definido'], 403);
         }
         if ($user->roles->Nombre_rol === 'Administrador') {
             $usuarios = usuario::create($request->all());
-            return response()->json($usuarios, 201);
+            return response()->json(['result' => 'ok', 'data' => $usuarios], 201);
         }
         if ($user->roles->Nombre_rol === 'Cliente') {
             $request->merge(['idUsuario' => $user->idUsuario]);
             $usuarioCli = usuario::where('idUsuario', $user->idUsuario)->get();
-            return response()->json($usuarioCli, 201);
+            return response()->json(['result' => 'ok', 'data' => $usuarioCli], 201);
         }
 
         if ($user->roles->Nombre_rol === 'Barbero') {
@@ -103,6 +117,7 @@ class usuarioController extends Controller
             return response()->json($usuarioBar, 201);
         }
 
+        return response()->json($usuario->load('especialidad'), 201);
     }
 
     public function show(string $id)
@@ -110,10 +125,10 @@ class usuarioController extends Controller
         $usuario = usuario::find($id);
 
         if (!$usuario) {
-            return response()->json(['message' => 'Usuario no encontrado'], 404);
+            return response()->json(['result' => 'error', 'message' => 'Usuario no encontrado'], 404);
         }
         if ($usuario->roles->Nombre_rol === 'Administrador') {
-            return response()->json($usuario);
+            return response()->json(['result' => 'ok', 'data' => $usuario]);
         }
 
 
@@ -121,48 +136,65 @@ class usuarioController extends Controller
 
     public function update(Request $request, string $id)
     {
-        $user = Auth::user();
-        /*$user = usuario::find($id);
+        $usuario = usuario::find($id);
 
-
-        if ($user->roles->Nombre_rol === 'Administrador') {
-            $user->update($request->all());
-            return response()->json(['message' => 'Usuario actualizado correctamente', 'usuario' => $user]);
-        } else {
-            return response()->json(['message' => 'No tienes permisos para actualizar este usuario'], 403);
-        }*/
-
-        $user = usuario::find($id);
-        if (!$user) {
-            return response()->json(['message' => 'Usuario no encontrado'], 404);
+        if (!$usuario) {
+            return response()->json(['result' => 'error', 'message' => 'Usuario no encontrado'], 404);
         }
+
+
+        $usuarioAutenticado = $request->user();
+
         $validator = Validator::make($request->all(), [
             'Nombre' => 'required|string',
-            'correo' => 'sometimes|required|string|max:255|unique:usuario,Correo,' . $user->idUsuario . ',idUsuario',
+            'correo' => 'sometimes|required|string|max:255|unique:usuario,Correo,' . $usuario->idUsuario . ',idUsuario',
             'telefono' => 'required|string|max:45',
-            'contrasenha' => 'required|string|min:6',
-            'especialidad' => 'nullable|string|max:45',
-            'disponibilidad' => 'nullable|string|max:45',
-            'horario' => 'nullable|string|max:45',
-            'Roles_IDRol' => 'sometimes|required|exists:roles,idRol'
+            'contrasenha' => 'sometimes|string|min:6',
+            'Roles_IDRol' => 'sometimes|required|exists:roles,idRol',
+
+            'servicios' => 'sometimes|array',
+            'servicios.*' => 'exists:servicios,idServicio'
         ], [
             'Nombre.required' => 'El campo Nombre es obligatorio.',
             'correo.required' => 'El campo correo es obligatorio.',
             'correo.unique' => 'El correo ya está en uso.',
             'telefono.required' => 'El campo telefono es obligatorio.',
-            'contrasenha.required' => 'El campo contrasenha es obligatorio.',
             'contrasenha.min' => 'La contrasenha debe tener al menos 6 caracteres.',
-            'Roles_IDRol.required' => 'El campo Roles_IDRol es obligatorio.',
             'Roles_IDRol.exists' => 'El rol seleccionado no es válido.'
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json(['result' => 'error', 'message' => 'Error de validación', 'errors' => $validator->errors()], 422);
         }
 
-        $user->update($request->all());
-        return response()->json(['message' => 'Usuario actualizado correctamente', 'usuario' => $user]);
 
+        if ($request->has('servicio') && $usuarioAutenticado->Roles_IDRol !== 1) {
+            return response()->json([
+                'message' => 'Acceso denegado. Solo un administrador puede habilitar'
+            ], 403);
+        }
+
+        $datos = $request->all();
+
+        if ($request->filled('contrasenha')) {
+            $datos['contrasenha'] = bcrypt($datos['contrasenha']);
+        } else {
+            unset($datos['contrasenha']);
+        }
+
+
+        if ($usuarioAutenticado->Roles_IDRol !== 1) {
+            unset($datos['Roles_IDRol']);
+        }
+
+        $usuario->update($datos);
+
+
+        if ($usuario->Roles_IDRol == 2 && $request->has('servicio')) {
+            $usuario->especialidad()->sync($request->servicio);
+        }
+
+        return response()->json(['result' => 'ok', 'message' => 'Usuario actualizado correctamente', 'usuario' => $usuario->load('especialidades')]);
     }
 
     public function destroy(string $id)
@@ -170,11 +202,11 @@ class usuarioController extends Controller
         $usuario = usuario::find($id);
 
         if (!$usuario) {
-            return response()->json(['message' => 'Usuario no encontrado'], 404);
+            return response()->json(['result' => 'error', 'message' => 'Usuario no encontrado'], 404);
         }
 
         $usuario->delete();
-        return response()->json(['message' => 'Usuario eliminado correctamente']);
+        return response()->json(['result' => 'ok', 'message' => 'Usuario eliminado correctamente']);
 
 
     }

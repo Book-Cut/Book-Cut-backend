@@ -52,4 +52,9 @@ class usuario extends Authenticatable
         return $this->hasMany(Citas::class, 'Usuario_idUsuarioCli', 'idUsuario');
     }
 
+    public function especialidad()
+    {
+        return $this->belongsToMany(Servicio::class, 'barbero_servicio_table', 'Usuario_idUsuarioBar', 'idServicio');
+    }
+
 }
