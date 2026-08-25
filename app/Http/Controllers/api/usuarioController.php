@@ -59,7 +59,8 @@ class usuarioController extends Controller
             'especialidad' => 'nullable|string|max:45',
             'disponibilidad' => 'nullable|string|max:45',
             'horario' => 'nullable|string|max:45',
-            'Roles_IDRol' => 'required|exists:roles,idRol'
+            'Roles_IDRol' => 'required|exists:roles,idRol',
+            'terminos_aceptados' => 'required|accepted'
         ], [
             'Nombre.required' => 'El campo Nombre es obligatorio.',
             'correo.required' => 'El campo correo es obligatorio.',
@@ -68,7 +69,9 @@ class usuarioController extends Controller
             'contrasenha.required' => 'El campo contrasenha es obligatorio.',
             'contrasenha.min' => 'La contrasenha debe tener al menos 6 caracteres.',
             'Roles_IDRol.required' => 'El campo Roles_IDRol es obligatorio.',
-            'Roles_IDRol.exists' => 'El rol seleccionado no es válido.'
+            'Roles_IDRol.exists' => 'El rol seleccionado no es válido.',
+            'terminos_aceptados.required' => 'Debes aceptar los términos y condiciones.',
+            'terminos_aceptados.accepted' => 'Debes aceptar los términos y condiciones.',
         ]);
 
         if ($validator->fails()) {
