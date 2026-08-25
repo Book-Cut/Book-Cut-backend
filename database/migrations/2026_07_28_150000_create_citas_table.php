@@ -10,7 +10,7 @@ return new class extends Migration {
         Schema::create('cita', function (Blueprint $table) {
             $table->id('idCita')->unsigned()->autoIncrement();
             $table->dateTime('Fecha_hora');
-            $table->enum('estado', ['Confirmado', 'Pendiente', 'Cancelado'])->default('Pendiente');
+            $table->enum('estado', ['Confirmado', 'Pendiente', 'Cancelado', 'Finalizado'])->default('Pendiente');
             $table->unsignedBigInteger('Valora_Idvalora')->nullable();
             $table->unsignedBigInteger('Usuario_idUsuarioCli');
             $table->unsignedBigInteger('Usuario_idUsuarioBar');

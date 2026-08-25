@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
             HorarioSeeder::class,
             ValoraSeeder::class,
             BeneficioSeeder::class,
-            PerfilSeeder::class,
+
             barbero_has_horarioSeeder::class,
             CitaSeeder::class,
             Cita_servicioSeeder::class,

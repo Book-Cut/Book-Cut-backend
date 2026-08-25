@@ -13,6 +13,7 @@ return new class extends Migration {
         if (!Schema::hasTable('Usuario')) {
             Schema::create('Usuario', function (Blueprint $table) {
                 $table->id('idUsuario');
+                $table->string('foto_perfil', 255)->nullable();
                 $table->text('Nombre');
                 $table->string('correo', 255)->unique();
                 $table->string('telefono', 45);
@@ -25,6 +26,7 @@ return new class extends Migration {
                 $table->primary('idUsuario');
                 $table->foreign('Roles_IDRol')->references('iDRol')->on('roles');
             });
+
         }
     }
 
