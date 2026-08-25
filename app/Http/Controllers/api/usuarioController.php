@@ -60,7 +60,18 @@ class usuarioController extends Controller
             'telefono' => 'required|string|max:45',
             'contrasenha' => 'required|string|min:6',
             'Roles_IDRol' => 'required|exists:roles,idRol',
-            'servicio' => 'sometimes|array',
+             'servicio' => 'sometimes|array'
+        ], [
+            'Nombre.required' => 'El campo Nombre es obligatorio.',
+            'correo.required' => 'El campo correo es obligatorio.',
+            'correo.unique' => 'El correo ya está en uso.',
+            'telefono.required' => 'El campo telefono es obligatorio.',
+            'contrasenha.required' => 'El campo contrasenha es obligatorio.',
+            'contrasenha.min' => 'La contrasenha debe tener al menos 6 caracteres.',
+            'Roles_IDRol.required' => 'El campo Roles_IDRol es obligatorio.',
+            'Roles_IDRol.exists' => 'El rol seleccionado no es válido.',
+            'terminos_aceptados.required' => 'Debes aceptar los términos y condiciones.',
+            'terminos_aceptados.accepted' => 'Debes aceptar los términos y condiciones.',
             'servicio.*' => 'exists:servicio,idServicio'
         ]);
 

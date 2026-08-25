@@ -23,7 +23,8 @@ class usuario extends Authenticatable
         'especialidad',
         'disponibilidad',
         'horario',
-        'Roles_IDRol'
+        'Roles_IDRol',
+        'terminos_aceptados'
     ];
 
     public function getAuthPassword()

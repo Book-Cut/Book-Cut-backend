@@ -141,4 +141,6 @@ class perfilController extends Controller
             return response()->json(['result' => 'error', 'message' => 'Perfil no encontrado'], 404);
         }
     }
-}
+}    
+
+
