@@ -16,7 +16,7 @@ class horarioController extends Controller
     {
         //
         $horarios = horario::all();
-        return response()->json($horarios);
+        return response()->json(['result' => 'ok', 'message' => 'Horarios obtenidos correctamente', 'data' => $horarios]);
 
     }
 
@@ -28,17 +28,18 @@ class horarioController extends Controller
         $user = Auth::user();
 
         if (!$user || !$user->roles) {
-            return response()->json(['message' => 'Rol no definido'], 403);
+            return response()->json(['result' => 'error', 'message' => 'Rol no definido'], 403);
         }
 
         if ($user->roles->Nombre_rol !== 'Administrador') {
             return response()->json([
+                'result' => 'error',
                 'message' => 'No tienes permisos para crear horarios.'
             ], 403);
         }
 
         $horarios = horario::create($request->all());
-        return response()->json(['message' => 'Horario creado correctamente', 'horarios' => $horarios], 201);
+        return response()->json(['result' => 'ok', 'message' => 'Horario creado correctamente', 'data' => $horarios], 201);
     }
 
     /**
@@ -48,7 +49,7 @@ class horarioController extends Controller
     {
         //
         $horario = horario::find($id);
-        return response()->json($horario);
+        return response()->json(['result' => 'ok', 'message' => 'Horario obtenido correctamente', 'data' => $horario]);
     }
 
     /**
@@ -59,11 +60,12 @@ class horarioController extends Controller
         $user = Auth::user();
 
         if (!$user || !$user->roles) {
-            return response()->json(['message' => 'Rol no definido'], 403);
+            return response()->json(['result' => 'error', 'message' => 'Rol no definido'], 403);
         }
 
         if ($user->roles->Nombre_rol !== 'Administrador') {
             return response()->json([
+                'result' => 'error',
                 'message' => 'No tienes permisos para actualizar horarios.'
             ], 403);
         }
@@ -71,9 +73,9 @@ class horarioController extends Controller
         $horario = horario::find($id);
         if ($horario) {
             $horario->update($request->all());
-            return response()->json(['message' => 'Horario actualizado correctamente', 'horario' => $horario]);
+            return response()->json(['result' => 'ok', 'message' => 'Horario actualizado correctamente', 'data' => $horario]);
         } else {
-            return response()->json(['message' => 'Horario no encontrado'], 404);
+            return response()->json(['result' => 'error', 'message' => 'Horario no encontrado'], 404);
         }
     }
 
@@ -85,11 +87,12 @@ class horarioController extends Controller
         $user = Auth::user();
 
         if (!$user || !$user->roles) {
-            return response()->json(['message' => 'Rol no definido'], 403);
+            return response()->json(['result' => 'error', 'message' => 'Rol no definido'], 403);
         }
 
         if ($user->roles->Nombre_rol !== 'Administrador') {
             return response()->json([
+                'result' => 'error',
                 'message' => 'No tienes permisos para eliminar horarios.'
             ], 403);
         }
@@ -97,9 +100,9 @@ class horarioController extends Controller
         $horario = horario::find($id);
         if ($horario) {
             $horario->delete();
-            return response()->json(['message' => 'Horario eliminado correctamente']);
+            return response()->json(['result' => 'ok', 'message' => 'Horario eliminado correctamente']);
         } else {
-            return response()->json(['message' => 'Horario no encontrado'], 404);
+            return response()->json(['result' => 'error', 'message' => 'Horario no encontrado'], 404);
         }
     }
 }

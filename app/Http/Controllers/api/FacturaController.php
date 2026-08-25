@@ -19,10 +19,10 @@ class FacturaController extends Controller
         $user = Auth::user();
 
         if (!$user || !$user->roles) {
-            return response()->json(['message' => 'Rol no definido'], 403);
+            return response()->json(['result' => 'error', 'message' => 'Rol no definido'], 403);
         }
 
-        
+
         $query = Factura::with(['usuario:idUsuario,Nombre,correo', 'cita.servicios']);
 
         if ($user->roles->Nombre_rol === 'Administrador') {
@@ -33,7 +33,7 @@ class FacturaController extends Controller
             return response()->json($query->where('Usuario_idUsuario', $user->idUsuario)->get(), 200);
         }
 
-        return response()->json(['message' => 'Sin permisos'], 403);
+        return response()->json(['result' => 'error', 'message' => 'Sin permisos'], 403);
     }
 
     /**
@@ -69,22 +69,22 @@ class FacturaController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'Error de validación', 'errors' => $validator->errors()], 422);
+            return response()->json(['result' => 'error', 'message' => 'Error de validación', 'errors' => $validator->errors()], 422);
         }
 
         $cita = Citas::find($request->Cita_idCita);
 
-        
+
         if ($cita->estado === 'Confirmado' && $cita->factura()->exists()) {
-            return response()->json(['message' => 'La cita ya tiene una factura asociada'], 400);
+            return response()->json(['result' => 'error', 'message' => 'La cita ya tiene una factura asociada'], 400);
         } else if ($cita->estado !== 'Confirmado') {
-            return response()->json(['message' => 'La cita no está confirmada, no se puede generar factura'], 400);
+            return response()->json(['result' => 'error', 'message' => 'La cita no está confirmada, no se puede generar factura'], 400);
         }
 
         $factura = Factura::create($validator->validated());
         $factura->load(['cita.servicios', 'usuario']);
 
-        return response()->json($factura, 201);
+        return response()->json(['result' => 'ok', 'message' => 'Factura creada correctamente', 'data' => $factura], 201);
     }
 
     /**
@@ -99,7 +99,7 @@ class FacturaController extends Controller
         ])->find($id);
 
         if (!$factura) {
-            return response()->json(['message' => 'Factura no encontrada'], 404);
+            return response()->json(['result' => 'error', 'message' => 'Factura no encontrada'], 404);
         }
 
         return response()->json($factura, 200);
@@ -113,7 +113,7 @@ class FacturaController extends Controller
         $user = Auth::user();
 
         if (!$user || !$user->roles || $user->roles->Nombre_rol !== 'Administrador') {
-            return response()->json(['message' => 'No tienes permisos para actualizar facturas.'], 403);
+            return response()->json(['result' => 'error', 'message' => 'No tienes permisos para actualizar facturas.'], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -124,16 +124,33 @@ class FacturaController extends Controller
             'total_pagar' => 'sometimes|required|numeric|min:0',
             'metodo_pago' => 'sometimes|required|in:Efectivo,Tarjeta,Transferencia,Nequi,Pendiente_Pago',
             'Usuario_idUsuario' => 'sometimes|required|exists:usuario,idUsuario'
+        ], [
+            'numero_factura.required' => 'El número de factura es obligatorio',
+            'numero_factura.unique' => 'El número de factura ya existe',
+            'fecha_emision.required' => 'La fecha de emisión es obligatoria',
+            'fecha_emision.date' => 'La fecha de emisión debe ser una fecha válida',
+            'Cita_idCita.required' => 'El ID de la cita es obligatorio',
+            'Cita_idCita.exists' => 'El ID de la cita no existe en la tabla citas',
+            'subtotal.required' => 'El subtotal es obligatorio',
+            'subtotal.numeric' => 'El subtotal debe ser un número',
+            'subtotal.min' => 'El subtotal debe ser mayor o igual a 0',
+            'total_pagar.required' => 'El total a pagar es obligatorio',
+            'total_pagar.numeric' => 'El total a pagar debe ser un número',
+            'total_pagar.min' => 'El total a pagar debe ser mayor o igual a 0',
+            'metodo_pago.required' => 'El método de pago es obligatorio',
+            'metodo_pago.in' => 'El método de pago no es válido',
+            'Usuario_idUsuario.required' => 'El ID del usuario es obligatorio',
+            'Usuario_idUsuario.exists' => 'El ID del usuario no existe en la tabla usuario',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json(['result' => 'error', 'message' => 'Error de validación', 'errors' => $validator->errors()], 422);
         }
 
         $factura = Factura::find($id);
 
         if (!$factura) {
-            return response()->json(['message' => 'Factura no encontrada'], 404);
+            return response()->json(['result' => 'error', 'message' => 'Factura no encontrada'], 404);
         }
 
         $factura->update($validator->validated());
@@ -150,17 +167,17 @@ class FacturaController extends Controller
         $user = Auth::user();
 
         if (!$user || !$user->roles || $user->roles->Nombre_rol !== 'Administrador') {
-            return response()->json(['message' => 'No tienes permisos para eliminar facturas.'], 403);
+            return response()->json(['result' => 'error', 'message' => 'No tienes permisos para eliminar facturas.'], 403);
         }
 
         $factura = Factura::find($id);
 
         if (!$factura) {
-            return response()->json(['message' => 'Factura no encontrada'], 404);
+            return response()->json(['result' => 'error', 'message' => 'Factura no encontrada'], 404);
         }
 
         $factura->delete();
 
-        return response()->json(['message' => 'Factura eliminada correctamente'], 200);
+        return response()->json(['result' => 'ok', 'message' => 'Factura eliminada correctamente'], 200);
     }
 }
