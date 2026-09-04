@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use DB;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -22,10 +21,9 @@ class UsuarioSeeder extends Seeder
                 'correo' => 'admin@bookcut.com',
                 'telefono' => '3001112233',
                 'contrasenha' => Hash::make('admin123'),
-                'especialidad' => 'No aplica',
-                'disponibilidad' => 'No aplica',
-                'horario' => 'No aplica',
-                'Roles_IDRol' => 1
+                'especialidad' => 'null',
+                'horario' => 'null',
+                'Roles_IDRol' => 1,
             ],
             [
                 'foto_perfil' => 'barbero1.jpg',
@@ -34,9 +32,8 @@ class UsuarioSeeder extends Seeder
                 'telefono' => '3102223344',
                 'contrasenha' => Hash::make('barbero123'),
                 'especialidad' => 'Cortes Clasicos',
-                'disponibilidad' => 'Lunes a Sabado',
-                'horario' => '09:00:00',
-                'Roles_IDRol' => 2
+                'horario' => '1',
+                'Roles_IDRol' => 2,
             ],
             [
                 'foto_perfil' => 'barbero2.jpg',
@@ -45,9 +42,8 @@ class UsuarioSeeder extends Seeder
                 'telefono' => '3203334455',
                 'contrasenha' => Hash::make('barbero456'),
                 'especialidad' => 'Colorimetria y Barba',
-                'disponibilidad' => 'Martes a Domingo',
-                'horario' => '10:00:00',
-                'Roles_IDRol' => 2
+                'horario' => '2',
+                'Roles_IDRol' => 2,
             ],
             [
                 'foto_perfil' => 'cliente1.jpg',
@@ -55,10 +51,9 @@ class UsuarioSeeder extends Seeder
                 'correo' => 'luis@gmail.com',
                 'telefono' => '3154445566',
                 'contrasenha' => Hash::make('cliente123'),
-                'especialidad' => 'No aplica',
-                'disponibilidad' => 'No aplica',
-                'horario' => 'No aplica',
-                'Roles_IDRol' => 3
+                'especialidad' => 'null',
+                'horario' => 'null',
+                'Roles_IDRol' => 3,
             ],
             [
                 'foto_perfil' => 'cliente2.jpg',
@@ -66,13 +61,11 @@ class UsuarioSeeder extends Seeder
                 'correo' => 'miguel@gmail.com',
                 'telefono' => '3185556677',
                 'contrasenha' => Hash::make('cliente456'),
-                'especialidad' => 'No aplica',
-                'disponibilidad' => 'No aplica',
-                'horario' => 'No aplica',
-                'Roles_IDRol' => 3
+                'especialidad' => 'null',
+                'horario' => 'null',
+                'Roles_IDRol' => 3,
             ],
         ]);
-
 
     }
 }
