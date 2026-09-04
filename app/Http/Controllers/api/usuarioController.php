@@ -60,11 +60,11 @@ class usuarioController extends Controller
     public function store(Request $request)
     {
         if ($request->Roles_IDRol < 3 && !Auth::guard('sanctum')->check()) {
-        return response()->json([
-            'result'  => 'error',
-            'message' => 'No tienes permisos para crear usuarios con este rol. Solo administradores.'
-        ], 401);
-    }
+            return response()->json([
+                'result' => 'error',
+                'message' => 'No tienes permisos para crear usuarios con este rol. Solo administradores.'
+            ], 401);
+        }
 
         $validator = Validator::make($request->all(), [
             'Nombre' => 'required|string',
@@ -121,6 +121,25 @@ class usuarioController extends Controller
         });
 
         return response()->json($usuario->load(['especialidad', 'horario']), 201);
+        $datosUsuario = [
+            'Nombre' => $request->Nombre,
+            'Correo' => $request->correo,
+            'telefono' => $request->telefono,
+            'contrasenha' => bcrypt($request->contrasenha),
+            'Roles_IDRol' => $request->Roles_IDRol,
+        ];
+
+        $usuario = usuario::create($datosUsuario);
+
+
+        if ($usuario->Roles_IDRol == 2 && $request->has('servicios')) {
+            $usuario->especialidades()->attach($request->servicios);
+        }
+
+        return response()->json([
+            'result' => 'ok',
+            'data' => $usuario->load('especialidad')
+        ], 201);
     }
 
     public function show(string $id)
