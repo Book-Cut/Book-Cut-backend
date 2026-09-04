@@ -20,13 +20,14 @@ class usuario extends Authenticatable
 
     public $fillable = [
         'Nombre',
-        'correo',
+        'Correo',
         'telefono',
         'contrasenha',
         'especialidad',
         'disponibilidad',
         'horario',
         'Roles_IDRol',
+        'terminos_aceptados'
     ];
 
     public function getAuthPassword()

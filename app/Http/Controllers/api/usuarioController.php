@@ -59,16 +59,39 @@ class usuarioController extends Controller
 
     public function store(Request $request)
     {
+        if ($request->Roles_IDRol < 3 && !Auth::guard('sanctum')->check()) {
+        return response()->json([
+            'result'  => 'error',
+            'message' => 'No tienes permisos para crear usuarios con este rol. Solo administradores.'
+        ], 401);
+    }
+
         $validator = Validator::make($request->all(), [
             'Nombre' => 'required|string',
             'correo' => 'required|string|max:255|unique:usuario,correo',
             'telefono' => 'required|string|max:45',
             'contrasenha' => 'required|string|min:6',
+
             'Roles_IDRol' => 'required|exists:roles,iDRol',
             'servicios' => 'sometimes|array',
             'servicios.*' => 'exists:servicio,idServicio',
             'horarios' => 'sometimes|array',
             'horarios.*' => 'exists:horario,idhorario',
+            
+            'terminos_aceptados' => 'required|accepted',
+            
+        ], [
+            'Nombre.required' => 'El campo Nombre es obligatorio.',
+            'correo.required' => 'El campo correo es obligatorio.',
+            'correo.unique' => 'El correo ya está en uso.',
+            'telefono.required' => 'El campo telefono es obligatorio.',
+            'contrasenha.required' => 'El campo contrasenha es obligatorio.',
+            'contrasenha.min' => 'La contrasenha debe tener al menos 6 caracteres.',
+            'Roles_IDRol.required' => 'El campo Roles_IDRol es obligatorio.',
+            'Roles_IDRol.exists' => 'El rol seleccionado no es válido.',
+            'terminos_aceptados.required' => 'Debes aceptar los términos y condiciones.',
+            'terminos_aceptados.accepted' => 'Debes aceptar los términos y condiciones.',
+            'servicio.*.exists' => 'Uno de los servicios no existe.'
         ]);
 
         if ($validator->fails()) {
@@ -128,8 +151,8 @@ class usuarioController extends Controller
             'correo' => 'sometimes|required|string|max:255|unique:usuario,correo,'.$usuario->idUsuario.',idUsuario',
             'telefono' => 'required|string|max:45',
             'contrasenha' => 'sometimes|string|min:6',
-            'Roles_IDRol' => 'sometimes|required|exists:roles,iDRol',
-
+            'Roles_IDRol' => 'sometimes|required|exists:roles,idRol',
+            'terminos_aceptados' => 'required|accepted',
             'servicios' => 'sometimes|array',
             'servicios.*' => 'exists:servicio,idServicio',
             'horarios' => 'sometimes|array',
@@ -140,7 +163,9 @@ class usuarioController extends Controller
             'correo.unique' => 'El correo ya está en uso.',
             'telefono.required' => 'El campo telefono es obligatorio.',
             'contrasenha.min' => 'La contrasenha debe tener al menos 6 caracteres.',
-            'Roles_IDRol.exists' => 'El rol seleccionado no es válido.',
+            'terminos_aceptados.required' => 'Debes aceptar los términos y condiciones.',
+            'terminos_aceptados.accepted' => 'Debes aceptar los términos y condiciones.',
+            'Roles_IDRol.exists' => 'El rol seleccionado no es válido.'
         ]);
 
         if ($validator->fails()) {
