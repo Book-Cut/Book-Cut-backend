@@ -11,6 +11,7 @@ class ValoraController extends Controller
     //
     public function index()
     {
+        //hola
         $valoras = Valora::with('cita', 'cita.getBarbero:idUsuario,Nombre', 'cita.getCliente:idUsuario,Nombre')->get();
         return response()->json(['result' => 'ok', 'message' => 'Valoraciones obtenidas correctamente', 'data' => $valoras]);
     }
