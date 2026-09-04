@@ -55,11 +55,11 @@ class usuarioController extends Controller
     public function store(Request $request)
     {
         if ($request->Roles_IDRol < 3 && !Auth::guard('sanctum')->check()) {
-        return response()->json([
-            'result'  => 'error',
-            'message' => 'No tienes permisos para crear usuarios con este rol. Solo administradores.'
-        ], 401);
-    }
+            return response()->json([
+                'result' => 'error',
+                'message' => 'No tienes permisos para crear usuarios con este rol. Solo administradores.'
+            ], 401);
+        }
 
         $validator = Validator::make($request->all(), [
             'Nombre' => 'required|string',
@@ -69,7 +69,7 @@ class usuarioController extends Controller
             'Roles_IDRol' => 'required|exists:roles,idRol',
             'terminos_aceptados' => 'required|accepted',
             'servicio' => 'sometimes|array',
-            'servicio.*'  => 'exists:servicio,idServicio'
+            'servicio.*' => 'exists:servicio,idServicio'
         ], [
             'Nombre.required' => 'El campo Nombre es obligatorio.',
             'correo.required' => 'El campo correo es obligatorio.',
@@ -89,9 +89,9 @@ class usuarioController extends Controller
         }
 
         $datosUsuario = [
-            'Nombre'      => $request->Nombre,
-            'Correo'      => $request->correo, 
-            'telefono'    => $request->telefono,
+            'Nombre' => $request->Nombre,
+            'Correo' => $request->correo,
+            'telefono' => $request->telefono,
             'contrasenha' => bcrypt($request->contrasenha),
             'Roles_IDRol' => $request->Roles_IDRol,
         ];
@@ -103,9 +103,9 @@ class usuarioController extends Controller
             $usuario->especialidades()->attach($request->servicios);
         }
 
-            return response()->json([
+        return response()->json([
             'result' => 'ok',
-            'data'   => $usuario->load('especialidad')
+            'data' => $usuario->load('especialidad')
         ], 201);
     }
 
