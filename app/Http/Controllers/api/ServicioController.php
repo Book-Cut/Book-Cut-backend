@@ -101,7 +101,9 @@ class ServicioController extends Controller
             return response()->json(['result' => 'error', 'message' => 'Servicio not found'], 404);
         }
 
-        $existeEnCita = Citas::where('Servicio_idServicio', $servicio->idServicio)->exists();
+        $existeEnCita = Citas::whereHas('servicios', function ($query) use ($servicio) {
+            $query->where('servicio.idServicio', $servicio->idServicio);
+        })->exists();
 
         if ($existeEnCita) {
             return response()->json(

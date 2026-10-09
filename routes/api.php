@@ -16,6 +16,7 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 
 Route::post('/usuarios', [usuarioController::class, 'store']);
+Route::get('/servicios', [ServicioController::class, 'index']);
 
 Route::middleware('auth:sanctum')->group(function () {
 
@@ -23,13 +24,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::apiResource('citas', CitasController::class);
-    Route::apiResource('servicios', ServicioController::class);
+    Route::apiResource('servicios', ServicioController::class)->except(['index']);
     Route::apiResource('facturas', FacturaController::class);
-   
+
     Route::apiResource('valora', ValoraController::class);
     Route::apiResource('beneficios', BeneficiosController::class);
     Route::apiResource('horario', horarioController::class);
-
 
     Route::middleware('role:1,2,3')->get('/beneficios', [BeneficiosController::class, 'index']);
     Route::middleware('role:1,2,3')->get('/beneficios/{id}', [BeneficiosController::class, 'show']);
