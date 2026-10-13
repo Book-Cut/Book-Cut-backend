@@ -227,4 +227,17 @@ class CitasController extends Controller
             return response()->json(['result' => 'error', 'message' => 'Error al actualizar cita', 'error' => $e->getMessage()], 500);
         }
     }
+
+    public function destroy(Request $request, $id)
+    {
+        $cita = Citas::find($id);
+        if ($cita) {
+            $cita->estado = "Cancelado";
+            $cita->save();
+            return response()->json(['result' => 'ok', 'message' => 'cita eliminada']);
+        } else {
+            return response()->json(['result' => 'error', 'message' => 'cita no encontrada'], 404);
+        }
+
+    }
 }
