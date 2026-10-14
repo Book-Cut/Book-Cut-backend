@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use App\Models\Citas;
 use App\Models\Servicio;
 use App\Models\factura;
+use App\Models\usuario;
+use DateTimeImmutable;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +16,47 @@ use Illuminate\Support\Str;
 
 class CitasController extends Controller
 {
+    public function disponibilidad(Request $request)
+    {
+        $datosValidados = $request->validate([
+            'barbero_id' => 'required|integer|exists:usuario,idUsuario',
+            'fecha' => 'required|date_format:Y-m-d|after_or_equal:today',
+            'duracion' => 'required|integer|min:1',
+        ]);
+
+        $barbero = usuario::with('horariosLaborales')
+            ->where('Roles_IDRol', 2)
+            ->find($datosValidados['barbero_id']);
+
+        if (!$barbero) {
+            return response()->json(['message' => 'El barbero seleccionado no existe.'], 404);
+        }
+
+        $fecha = new DateTimeImmutable($datosValidados['fecha']);
+        $horarios = $barbero->horariosLaborales->filter(fn($horario) => $this->horarioCorrespondeAlDia($horario->diasemana, $fecha));
+        $intervalosOcupados = $this->obtenerIntervalosOcupados($barbero->idUsuario, $datosValidados['fecha']);
+        $horasDisponibles = [];
+        $ahora = new DateTimeImmutable();
+
+        foreach ($horarios as $horario) {
+            $inicioJornada = new DateTimeImmutable($fecha->format('Y-m-d') . ' ' . $horario->horainicio);
+            $finJornada = new DateTimeImmutable($fecha->format('Y-m-d') . ' ' . $horario->horafin);
+
+            for ($inicio = $inicioJornada; $inicio->modify('+30 minutes') <= $finJornada; $inicio = $inicio->modify('+30 minutes')) {
+                $fin = $inicio->modify('+' . (int) $datosValidados['duracion'] . ' minutes');
+                if ($fin > $finJornada || ($fecha->format('Y-m-d') === $ahora->format('Y-m-d') && $inicio < $ahora)) {
+                    continue;
+                }
+
+                if ($this->intervaloDisponible($inicio, $fin, $intervalosOcupados)) {
+                    $horasDisponibles[$inicio->format('H:i')] = $inicio->format('H:i');
+                }
+            }
+        }
+
+        return response()->json(['data' => array_values($horasDisponibles)]);
+    }
+
     public function index()
     {
         $user = Auth::user();
@@ -88,6 +131,57 @@ class CitasController extends Controller
         try {
             DB::beginTransaction();
 
+            $barbero = usuario::with('horariosLaborales')
+                ->where('Roles_IDRol', 2)
+                ->lockForUpdate()
+                ->find($request->input('Usuario_idUsuarioBar'));
+
+            $serviciosInput = $request->input('servicios');
+            $serviciosSeleccionados = Servicio::whereIn(
+                'idServicio',
+                collect($serviciosInput)->pluck('idServicio')->unique()
+            )->get()->keyBy('idServicio');
+            if (!$barbero) {
+                DB::rollBack();
+                return response()->json(['message' => 'El barbero seleccionado no existe.'], 422);
+            }
+
+            $esContinuo = $request->boolean('es_continuo');
+            $horaSiguiente = new DateTimeImmutable($request->input('Fecha_hora'));
+            $intervalosPorFecha = [];
+            $horariosServicios = [];
+
+            foreach ($serviciosInput as $servicioInput) {
+                $servicioSeleccionado = $serviciosSeleccionados->get($servicioInput['idServicio']);
+                $inicioServicio = $esContinuo
+                    ? $horaSiguiente
+                    : new DateTimeImmutable($servicioInput['fecha_hora_servicio']);
+                $finServicio = $inicioServicio->modify('+' . max(1, (int) $servicioSeleccionado->Duracion) . ' minutes');
+                $fechaServicio = $inicioServicio->format('Y-m-d');
+
+                if (!$this->estaDentroDelHorario($barbero, $inicioServicio, $finServicio)) {
+                    DB::rollBack();
+                    return response()->json(['message' => 'Uno de los servicios está fuera del horario laboral del barbero.'], 422);
+                }
+
+                if (!array_key_exists($fechaServicio, $intervalosPorFecha)) {
+                    $intervalosPorFecha[$fechaServicio] = $this->obtenerIntervalosOcupados($barbero->idUsuario, $fechaServicio);
+                }
+
+                if (!$this->intervaloDisponible($inicioServicio, $finServicio, $intervalosPorFecha[$fechaServicio])) {
+                    DB::rollBack();
+                    return response()->json(['message' => 'Uno de los horarios ya no está disponible. Elige otro horario.'], 422);
+                }
+
+                $intervalosPorFecha[$fechaServicio][] = [$inicioServicio, $finServicio];
+                $horariosServicios[$servicioInput['idServicio']] = $esContinuo
+                    ? null
+                    : $inicioServicio->format('Y-m-d H:i:s');
+                if ($esContinuo) {
+                    $horaSiguiente = $finServicio;
+                }
+            }
+
 
             $cita = Citas::create([
                 'Fecha_hora' => $request->input('Fecha_hora'),
@@ -98,16 +192,15 @@ class CitasController extends Controller
             ]);
 
 
-            $serviciosInput = $request->input('servicios');
             $pivotData = [];
             $totalPagar = 0;
 
             foreach ($serviciosInput as $srv) {
-                $servicioModel = Servicio::find($srv['idServicio']);
+                $servicioModel = $serviciosSeleccionados->get($srv['idServicio']);
                 $totalPagar += $servicioModel->Precio;
 
                 $pivotData[$srv['idServicio']] = [
-                    'fecha_hora_servicio' => $request->input('es_continuo') ? null : $srv['fecha_hora_servicio']
+                    'fecha_hora_servicio' => $horariosServicios[$srv['idServicio']]
                 ];
             }
 
@@ -239,5 +332,78 @@ class CitasController extends Controller
             return response()->json(['result' => 'error', 'message' => 'cita no encontrada'], 404);
         }
 
+    }
+
+    private function horarioCorrespondeAlDia(string $diaHorario, DateTimeImmutable $fecha): bool
+    {
+        $dias = [
+            1 => ['lunes', 'monday'],
+            2 => ['martes', 'tuesday'],
+            3 => ['miercoles', 'wednesday'],
+            4 => ['jueves', 'thursday'],
+            5 => ['viernes', 'friday'],
+            6 => ['sabado', 'saturday'],
+            7 => ['domingo', 'sunday'],
+        ];
+        $diaNormalizado = Str::lower(Str::ascii(trim($diaHorario)));
+
+        return in_array($diaNormalizado, $dias[(int) $fecha->format('N')], true);
+    }
+
+    private function estaDentroDelHorario(usuario $barbero, DateTimeImmutable $inicio, DateTimeImmutable $fin): bool
+    {
+        foreach ($barbero->horariosLaborales as $horario) {
+            if (!$this->horarioCorrespondeAlDia($horario->diasemana, $inicio)) {
+                continue;
+            }
+
+            $inicioJornada = new DateTimeImmutable($inicio->format('Y-m-d') . ' ' . $horario->horainicio);
+            $finJornada = new DateTimeImmutable($inicio->format('Y-m-d') . ' ' . $horario->horafin);
+            if ($inicio >= $inicioJornada && $fin <= $finJornada) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function obtenerIntervalosOcupados(int $barberoId, string $fecha): array
+    {
+        $citas = Citas::with('servicios')
+            ->where('Usuario_idUsuarioBar', $barberoId)
+            ->whereDate('Fecha_hora', $fecha)
+            ->where('estado', '!=', 'Cancelado')
+            ->get();
+
+        $intervalos = [];
+        foreach ($citas as $cita) {
+            $serviciosConHora = $cita->servicios->filter(fn($servicio) => $servicio->pivot->fecha_hora_servicio);
+            if ($serviciosConHora->isNotEmpty()) {
+                foreach ($serviciosConHora as $servicio) {
+                    $inicio = new DateTimeImmutable($servicio->pivot->fecha_hora_servicio);
+                    $fin = $inicio->modify('+' . max(1, (int) $servicio->Duracion) . ' minutes');
+                    $intervalos[] = [$inicio, $fin];
+                }
+                continue;
+            }
+
+            $inicio = new DateTimeImmutable($cita->Fecha_hora);
+            $duracion = (int) $cita->servicios->sum('Duracion');
+            $fin = $inicio->modify('+' . max(1, $duracion ?: 60) . ' minutes');
+            $intervalos[] = [$inicio, $fin];
+        }
+
+        return $intervalos;
+    }
+
+    private function intervaloDisponible(DateTimeImmutable $inicio, DateTimeImmutable $fin, array $intervalosOcupados): bool
+    {
+        foreach ($intervalosOcupados as [$inicioOcupado, $finOcupado]) {
+            if ($inicio < $finOcupado && $fin > $inicioOcupado) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
