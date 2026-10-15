@@ -20,7 +20,7 @@ class usuario extends Authenticatable
 
     public $fillable = [
         'Nombre',
-        'Correo',
+        'correo',
         'telefono',
         'contrasenha',
         'especialidad',
