@@ -17,6 +17,8 @@ Route::post('/register', [AuthController::class, 'register']);
 
 Route::post('/usuarios', [usuarioController::class, 'store']);
 Route::get('/servicios', [ServicioController::class, 'index']);
+Route::get('/barberos', [usuarioController::class, 'barberos']);
+Route::get('/disponibilidad', [CitasController::class, 'disponibilidad']);
 
 Route::middleware('auth:sanctum')->group(function () {
 

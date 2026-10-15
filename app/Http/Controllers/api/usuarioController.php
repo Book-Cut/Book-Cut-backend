@@ -11,12 +11,22 @@ use Illuminate\Support\Facades\Validator;
 
 class usuarioController extends Controller
 {
+    public function barberos()
+    {
+        $barberos = usuario::query()
+            ->where('Roles_IDRol', 2)
+            ->orderBy('Nombre')
+            ->get(['idUsuario', 'Nombre', 'especialidad']);
+
+        return response()->json(['data' => $barberos]);
+    }
+
     public function index(Request $request)
     {
         $user = Auth::user();
         $user = $request->user();
 
-        if (! $user || ! $user->roles) {
+        if (!$user || !$user->roles) {
             return response()->json(['result' => 'error', 'message' => 'Rol no definido'], 403);
         }
 
@@ -77,9 +87,9 @@ class usuarioController extends Controller
             'servicios.*' => 'exists:servicio,idServicio',
             'horarios' => 'sometimes|array',
             'horarios.*' => 'exists:horario,idhorario',
-            
+
             'terminos_aceptados' => 'required|accepted',
-            
+
         ], [
             'Nombre.required' => 'El campo Nombre es obligatorio.',
             'correo.required' => 'El campo correo es obligatorio.',
@@ -146,7 +156,7 @@ class usuarioController extends Controller
     {
         $usuario = usuario::find($id);
 
-        if (! $usuario) {
+        if (!$usuario) {
             return response()->json(['result' => 'error', 'message' => 'Usuario no encontrado'], 404);
         }
         if ($usuario->roles->Nombre_rol === 'Administrador') {
@@ -159,7 +169,7 @@ class usuarioController extends Controller
     {
         $usuario = usuario::find($id);
 
-        if (! $usuario) {
+        if (!$usuario) {
             return response()->json(['result' => 'error', 'message' => 'Usuario no encontrado'], 404);
         }
 
@@ -167,7 +177,7 @@ class usuarioController extends Controller
 
         $validator = Validator::make($request->all(), [
             'Nombre' => 'required|string',
-            'correo' => 'sometimes|required|string|max:255|unique:usuario,correo,'.$usuario->idUsuario.',idUsuario',
+            'correo' => 'sometimes|required|string|max:255|unique:usuario,correo,' . $usuario->idUsuario . ',idUsuario',
             'telefono' => 'required|string|max:45',
             'contrasenha' => 'sometimes|string|min:6',
             'Roles_IDRol' => 'sometimes|required|exists:roles,idRol',
@@ -233,7 +243,7 @@ class usuarioController extends Controller
     {
         $usuario = usuario::find($id);
 
-        if (! $usuario) {
+        if (!$usuario) {
             return response()->json(['result' => 'error', 'message' => 'Usuario no encontrado'], 404);
         }
 

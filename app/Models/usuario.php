@@ -62,6 +62,11 @@ class usuario extends Authenticatable
 
     public function horario()
     {
+        return $this->horariosLaborales();
+    }
+
+    public function horariosLaborales()
+    {
         return $this->belongsToMany(horario::class, 'barbero_has_horario', 'Usuario_idUsuarioBar', 'horario_idhorario');
     }
 }
