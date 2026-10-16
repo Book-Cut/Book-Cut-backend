@@ -5,10 +5,9 @@ use App\Http\Controllers\api\BeneficiosController;
 use App\Http\Controllers\api\CitasController;
 use App\Http\Controllers\api\FacturaController;
 use App\Http\Controllers\api\horarioController;
-use App\Http\Controllers\api\perfilController;
+use App\Http\Controllers\api\PerfilController;
 use App\Http\Controllers\api\ServicioController;
 use App\Http\Controllers\api\usuarioController;
-
 use App\Http\Controllers\api\ValoraController;
 use Illuminate\Support\Facades\Route;
 
@@ -21,6 +20,9 @@ Route::get('/barberos', [usuarioController::class, 'barberos']);
 Route::get('/disponibilidad', [CitasController::class, 'disponibilidad']);
 
 Route::middleware('auth:sanctum')->group(function () {
+
+    Route::get('/perfil', [PerfilController::class, 'show']);
+    Route::patch('/perfil', [PerfilController::class, 'update']);
 
     Route::apiResource('usuarios', usuarioController::class)->except(['store']);
 
