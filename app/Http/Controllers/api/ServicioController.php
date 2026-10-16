@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Citas;
 use App\Models\Servicio;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 
 class ServicioController extends Controller
 {
@@ -28,15 +29,45 @@ class ServicioController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->roles->Nombre_rol !== 'Administrador') {
+        if (!$user || !$user->roles || $user->roles->Nombre_rol !== 'Administrador') {
             return response()->json([
                 'result' => 'error',
                 'message' => 'No tienes permisos para crear servicios.'
             ], 403);
         }
 
-        $servicio = Servicio::create($request->all());
-        return response()->json(['result' => 'ok', 'message' => 'Servicio creado correctamente', 'data' => $servicio], 201);
+        $validator = Validator::make($request->all(), [
+            'Nombre' => 'required|string|max:255',
+            'Duracion' => 'required|integer|min:1',
+            'Precio' => 'required|integer|min:0|max:2147483647',
+        ], [
+            'Nombre.required' => 'El nombre del servicio es obligatorio.',
+            'Nombre.string' => 'El nombre del servicio debe ser texto.',
+            'Nombre.max' => 'El nombre del servicio no puede superar los 255 caracteres.',
+            'Duracion.required' => 'La duración del servicio es obligatoria.',
+            'Duracion.integer' => 'La duración debe ser un número entero de minutos.',
+            'Duracion.min' => 'La duración debe ser de al menos 1 minuto.',
+            'Precio.required' => 'El precio del servicio es obligatorio.',
+            'Precio.integer' => 'El precio debe ser un número entero.',
+            'Precio.min' => 'El precio no puede ser negativo.',
+            'Precio.max' => 'El precio supera el máximo permitido de $2,147,483,647. Ingresa un importe menor.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'result' => 'error',
+                'message' => $validator->errors()->first(),
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $servicio = Servicio::create($validator->validated());
+
+        return response()->json([
+            'result' => 'ok',
+            'message' => 'Servicio creado correctamente',
+            'data' => $servicio
+        ], 201);
     }
 
     /**

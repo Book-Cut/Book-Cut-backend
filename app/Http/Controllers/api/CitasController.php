@@ -65,7 +65,6 @@ class CitasController extends Controller
             return response()->json(['result' => 'error', 'message' => 'Rol no definido'], 403);
         }
 
-
         $query = Citas::with([
             'cliente:idUsuario,Nombre,correo,telefono',
             'barbero:idUsuario,Nombre,correo,telefono,especialidad',
@@ -73,10 +72,17 @@ class CitasController extends Controller
             'factura'
         ]);
 
+        // 1. Si es Administrador, ve todas las citas
         if ($user->roles->Nombre_rol === 'Administrador') {
             return response()->json($query->get(), 200);
         }
 
+        // 2. Si es Barbero (ajusta 'Barbero' si en tu BD el nombre del rol es diferente, ej: 'Barbero' o 'empleado')
+        if ($user->roles->Nombre_rol === 'Barbero') {
+            return response()->json($query->where('Usuario_idUsuarioBar', $user->idUsuario)->get(), 200);
+        }
+
+        // 3. Si es Cliente, ve solo las suyas
         if ($user->roles->Nombre_rol === 'Cliente') {
             return response()->json($query->where('Usuario_idUsuarioCli', $user->idUsuario)->get(), 200);
         }
