@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class ServicioSeeder extends Seeder
 {
@@ -12,26 +12,34 @@ class ServicioSeeder extends Seeder
      */
     public function run(): void
     {
-        //
-        \DB::table('servicio')->insert([
+        $servicios = [
             [
-                'idServicio' => 1,
                 'Nombre' => 'Corte Clasico',
-                'Duracion' => '30',
-                'Precio' => 20000.00,
+                'Duracion' => 30,
+                'Precio' => 20000,
             ],
             [
-                'idServicio' => 2,
                 'Nombre' => 'Perfilado de Barba',
-                'Duracion' => '20',
-                'Precio' => 15000.00,
+                'Duracion' => 20,
+                'Precio' => 15000,
             ],
             [
-                'idServicio' => 3,
                 'Nombre' => 'Corte y Barba Premium',
-                'Duracion' => '60',
-                'Precio' => 35000.00,
+                'Duracion' => 60,
+                'Precio' => 35000,
             ],
-        ]);
+            [
+                'Nombre' => 'Lavado y peinado',
+                'Duracion' => 30,
+                'Precio' => 18000,
+            ],
+        ];
+
+        foreach ($servicios as $servicio) {
+            DB::table('servicio')->updateOrInsert(
+                ['Nombre' => $servicio['Nombre']],
+                $servicio,
+            );
+        }
     }
 }

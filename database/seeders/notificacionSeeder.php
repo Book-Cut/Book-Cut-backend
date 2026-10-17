@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class notificacionSeeder extends Seeder
 {
@@ -12,27 +12,26 @@ class notificacionSeeder extends Seeder
      */
     public function run(): void
     {
-        //
-         \DB::table('notificacion')->insert([
+        $citas = DB::table('cita')
+            ->join('factura', 'factura.Cita_idCita', '=', 'cita.idCita')
+            ->whereIn('estado', ['Confirmado', 'Pendiente'])
+            ->where('factura.numero_factura', 'like', 'SEED-BOOKCUT-%')
+            ->get(['cita.idCita', 'cita.estado']);
 
-        [
-            "tipo"=> "correo", 
-            "mensaje"=> "Tu cita ha sido confirmada con exito", 
-            "fecha_envio"=> "2026-07-19", 
-            "Cita_idCita"=> 1
-        ],
-        [
-            "tipo"=> "sms",
-            "mensaje"=> "Recuerda tu cita de manhana",
-            "fecha_envio"=> "2026-07-20",
-            "Cita_idCita"=> 2
-        ],
-        [
-            "tipo"=> "correo",
-            "mensaje"=> "Tu cita esta pendiente de confirmacion por el barbero",
-            "fecha_envio"=> "2026-07-22",
-            "Cita_idCita"=> 3
-        ]
-        ]);
+        foreach ($citas as $cita) {
+            $mensaje = $cita->estado === 'Confirmado'
+                ? 'Tu cita está confirmada.'
+                : 'Tu cita está pendiente de confirmación.';
+
+            DB::table('notificacion')->updateOrInsert(
+                ['Cita_idCita' => $cita->idCita, 'tipo' => 'Correo'],
+                [
+                    'tipo' => 'Correo',
+                    'mensaje' => $mensaje,
+                    'fecha_envio' => now()->toDateString(),
+                    'Cita_idCita' => $cita->idCita,
+                ],
+            );
+        }
     }
 }

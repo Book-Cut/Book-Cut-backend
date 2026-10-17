@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class ValoraSeeder extends Seeder
 {
@@ -12,26 +12,34 @@ class ValoraSeeder extends Seeder
      */
     public function run(): void
     {
-        //
-        \DB::table('valora')->insert([
-            [
-                'EvaluacionBar' => 5,
-                'EvaluacionCita' => 4,
-                'Fecha_evaluacion_bar' => '2026-07-20 10:00:00',
-                'Fecha_evaluacion_cita' => '2026-07-20 10:00:00',
-            ],
-            [
+        $citasFinalizadas = DB::table('cita')
+            ->join('factura', 'factura.Cita_idCita', '=', 'cita.idCita')
+            ->where('cita.estado', 'Finalizado')
+            ->where('factura.numero_factura', 'like', 'SEED-BOOKCUT-%')
+            ->select('cita.idCita', 'cita.Fecha_hora', 'cita.Valora_Idvalora')
+            ->get();
+
+        foreach ($citasFinalizadas as $cita) {
+            $datosValoracion = [
                 'EvaluacionBar' => 5,
                 'EvaluacionCita' => 5,
-                'Fecha_evaluacion_bar' => '2026-07-21 10:00:00',
-                'Fecha_evaluacion_cita' => '2026-07-21 10:00:00',
-            ],
-            [
-                'EvaluacionBar' => 4,
-                'EvaluacionCita' => 3,
-                'Fecha_evaluacion_bar' => '2026-07-22 10:00:00',
-                'Fecha_evaluacion_cita' => '2026-07-22 10:00:00',
-            ],
-        ]);
+                'Fecha_evaluacion_bar' => $cita->Fecha_hora,
+                'Fecha_evaluacion_cita' => $cita->Fecha_hora,
+            ];
+
+            if ($cita->Valora_Idvalora) {
+                DB::table('valora')
+                    ->where('Idvalora', $cita->Valora_Idvalora)
+                    ->update($datosValoracion);
+
+                continue;
+            }
+
+            $idValoracion = DB::table('valora')->insertGetId($datosValoracion, 'Idvalora');
+
+            DB::table('cita')
+                ->where('idCita', $cita->idCita)
+                ->update(['Valora_Idvalora' => $idValoracion]);
+        }
     }
 }

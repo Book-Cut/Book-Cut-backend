@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class HorarioSeeder extends Seeder
 {
@@ -12,8 +12,7 @@ class HorarioSeeder extends Seeder
      */
     public function run(): void
     {
-        //
-        \DB::table('horario')->insert([
+        $horarios = [
             [
                 'diasemana' => 'Lunes',
                 'horainicio' => '09:00:00',
@@ -45,6 +44,13 @@ class HorarioSeeder extends Seeder
                 'horafin' => '20:00:00',
             ],
 
-        ]);
+        ];
+
+        foreach ($horarios as $horario) {
+            DB::table('horario')->updateOrInsert(
+                ['diasemana' => $horario['diasemana']],
+                $horario,
+            );
+        }
     }
 }

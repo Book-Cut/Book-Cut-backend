@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use DB;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class UsuarioSeeder extends Seeder
@@ -13,59 +13,82 @@ class UsuarioSeeder extends Seeder
      */
     public function run(): void
     {
-        //
-        DB::table('usuario')->insert([
+        $roles = DB::table('roles')->pluck('iDRol', 'Nombre_rol');
+        $usuarios = [
             [
-                'foto_perfil' => 'admin.jpg',
+                'foto_perfil' => null,
                 'Nombre' => 'Juan Perez',
                 'correo' => 'admin@bookcut.com',
                 'telefono' => '3001112233',
-                'contrasenha' => Hash::make('admin123'),
-                'especialidad' => 'null',
-                'horario' => 'null',
-                'Roles_IDRol' => 1,
+                'contrasenha' => 'admin123',
+                'especialidad' => null,
+                'horario' => null,
+                'rol' => 'Administrador',
             ],
             [
-                'foto_perfil' => 'barbero1.jpg',
+                'foto_perfil' => null,
                 'Nombre' => 'Carlos Gomez',
                 'correo' => 'carlos@bookcut.com',
                 'telefono' => '3102223344',
-                'contrasenha' => Hash::make('barbero123'),
+                'contrasenha' => 'barbero123',
                 'especialidad' => 'Cortes Clasicos',
                 'horario' => '1',
-                'Roles_IDRol' => 2,
+                'rol' => 'Barbero',
             ],
             [
-                'foto_perfil' => 'barbero2.jpg',
+                'foto_perfil' => null,
                 'Nombre' => 'Andres Felipe',
                 'correo' => 'andres@bookcut.com',
                 'telefono' => '3203334455',
-                'contrasenha' => Hash::make('barbero456'),
+                'contrasenha' => 'barbero456',
                 'especialidad' => 'Colorimetria y Barba',
                 'horario' => '2',
-                'Roles_IDRol' => 2,
+                'rol' => 'Barbero',
             ],
             [
-                'foto_perfil' => 'cliente1.jpg',
+                'foto_perfil' => null,
                 'Nombre' => 'Luis Ramirez',
                 'correo' => 'luis@gmail.com',
                 'telefono' => '3154445566',
-                'contrasenha' => Hash::make('cliente123'),
-                'especialidad' => 'null',
-                'horario' => 'null',
-                'Roles_IDRol' => 3,
+                'contrasenha' => 'cliente123',
+                'especialidad' => null,
+                'horario' => null,
+                'rol' => 'Cliente',
             ],
             [
-                'foto_perfil' => 'cliente2.jpg',
+                'foto_perfil' => null,
                 'Nombre' => 'Miguel Torres',
                 'correo' => 'miguel@gmail.com',
                 'telefono' => '3185556677',
-                'contrasenha' => Hash::make('cliente456'),
-                'especialidad' => 'null',
-                'horario' => 'null',
-                'Roles_IDRol' => 3,
+                'contrasenha' => 'cliente456',
+                'especialidad' => null,
+                'horario' => null,
+                'rol' => 'Cliente',
             ],
-        ]);
+            [
+                'foto_perfil' => null,
+                'Nombre' => 'Sofia Martinez',
+                'correo' => 'sofia@gmail.com',
+                'telefono' => '3196667788',
+                'contrasenha' => 'cliente789',
+                'especialidad' => null,
+                'horario' => null,
+                'rol' => 'Cliente',
+            ],
+        ];
 
+        foreach ($usuarios as $usuario) {
+            $rol = $usuario['rol'];
+            unset($usuario['rol']);
+
+            DB::table('usuario')->updateOrInsert(
+                ['correo' => $usuario['correo']],
+                [
+                    ...$usuario,
+                    'Roles_IDRol' => $roles[$rol],
+                    'contrasenha' => Hash::make($usuario['contrasenha']),
+                ],
+            );
+        }
     }
 }
