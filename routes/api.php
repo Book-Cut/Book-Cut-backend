@@ -23,14 +23,17 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/disponibilidad', [GestionCitasController::class, 'disponibilidad']);
     Route::patch('/citas/{id}/reagendar', [GestionCitasController::class, 'reagendar']);
+    Route::patch('/citas/{id}/finalizar', [GestionCitasController::class, 'finalizar'])->name('citas.finalizar');
     Route::get('/perfil', [PerfilController::class, 'show']);
     Route::patch('/perfil', [PerfilController::class, 'update']);
 
     Route::apiResource('usuarios', usuarioController::class)->except(['store']);
 
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/admin/estadisticas', [FacturaController::class, 'estadisticas']);
     Route::apiResource('citas', CitasController::class)->only(['index', 'show']);
     Route::post('/citas', [GestionCitasController::class, 'store'])->name('citas.store');
+    Route::post('/citas/{id}/pago', [GestionCitasController::class, 'registrarPago'])->name('citas.pago');
     Route::match(['put', 'patch'], '/citas/{cita}', [GestionCitasController::class, 'update'])->name('citas.update');
     Route::delete('/citas/{cita}', [GestionCitasController::class, 'destroy'])->name('citas.destroy');
     Route::apiResource('servicios', ServicioController::class)->except(['index']);

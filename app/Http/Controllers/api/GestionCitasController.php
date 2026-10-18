@@ -174,6 +174,44 @@ class GestionCitasController extends Controller
         });
     }
 
+    public function finalizar(Request $request, int $id)
+    {
+        $usuario = $request->user();
+        if (! $usuario || ! $usuario->roles) {
+            return response()->json(['message' => 'Rol no definido.'], 403);
+        }
+
+        return DB::transaction(function () use ($usuario, $id) {
+            $cita = Citas::with(['cliente', 'barbero', 'servicios', 'factura'])
+                ->lockForUpdate()
+                ->find($id);
+
+            if (! $cita) {
+                return response()->json(['message' => 'Cita no encontrada.'], 404);
+            }
+
+            $esAdministrador = $usuario->roles->Nombre_rol === 'Administrador';
+            $esBarberoAsignado = $usuario->roles->Nombre_rol === 'Barbero'
+                && (int) $cita->Usuario_idUsuarioBar === (int) $usuario->idUsuario;
+
+            if (! $esAdministrador && ! $esBarberoAsignado) {
+                return response()->json(['message' => 'No tienes permiso para finalizar esta cita.'], 403);
+            }
+
+            if ($cita->estado !== 'Confirmado') {
+                return response()->json(['message' => 'Solo se pueden finalizar citas confirmadas.'], 422);
+            }
+
+            $cita->estado = 'Finalizado';
+            $cita->save();
+
+            return response()->json([
+                'message' => 'Cita finalizada correctamente.',
+                'cita' => $cita,
+            ]);
+        });
+    }
+
     public function store(Request $request)
     {
 
@@ -182,10 +220,11 @@ class GestionCitasController extends Controller
             'Usuario_idUsuarioBar' => 'required|exists:usuario,idUsuario',
             'Usuario_idUsuarioCli' => 'nullable|exists:usuario,idUsuario',
             'es_continuo' => 'required|boolean',
+            'modalidad_pago' => 'required|in:En línea,Presencial',
+            'metodo_pago' => 'required_if:modalidad_pago,En línea|prohibited_unless:modalidad_pago,En línea|in:Nequi,Tarjeta,Transferencia',
             'servicios' => 'required|array|min:1',
             'servicios.*.idServicio' => 'required|exists:servicio,idServicio',
             'servicios.*.fecha_hora_servicio' => 'required_if:es_continuo,false|nullable|date',
-            'metodo_pago' => 'required|in:Efectivo,Nequi,Tarjeta,Transferencia,Pendiente_Pago',
         ], [
             'Fecha_hora.required' => 'El campo Fecha_hora es obligatorio.',
             'Fecha_hora.date' => 'El campo Fecha_hora debe ser una fecha válida.',
@@ -201,8 +240,6 @@ class GestionCitasController extends Controller
             'servicios.*.idServicio.exists' => 'Uno de los servicios seleccionados no existe.',
             'servicios.*.fecha_hora_servicio.required_if' => 'La fecha y hora del servicio es obligatoria cuando es_continuo es falso.',
             'servicios.*.fecha_hora_servicio.date' => 'La fecha y hora del servicio debe ser una fecha válida.',
-            'metodo_pago.required' => 'El campo metodo_pago es obligatorio.',
-            'metodo_pago.in' => 'El metodo_pago debe ser uno de los siguientes: Efectivo, Nequi, Tarjeta, Transferencia, Pendiente_Pago.',
         ]);
 
         if ($validator->fails()) {
@@ -278,6 +315,8 @@ class GestionCitasController extends Controller
             $cita = Citas::create([
                 'Fecha_hora' => $request->input('Fecha_hora'),
                 'estado' => 'Confirmado',
+                'estado_pago' => $request->input('modalidad_pago') === 'En línea' ? 'Pagado' : 'Pendiente',
+                'modalidad_pago' => $request->input('modalidad_pago'),
                 'Valora_Idvalora' => null,
                 'Usuario_idUsuarioCli' => $idCliente,
                 'Usuario_idUsuarioBar' => $request->input('Usuario_idUsuarioBar'),
@@ -297,16 +336,18 @@ class GestionCitasController extends Controller
 
             $cita->servicios()->attach($pivotData);
 
-            $factura = factura::create([
-                'numero_factura' => 'TEMP',
-                'fecha_emision' => now(),
-                'subtotal' => $totalPagar,
-                'total_pagar' => $totalPagar,
-                'metodo_pago' => $request->input('metodo_pago', 'Pendiente_Pago'),
-                'estado_factura' => 'Emitida',
-                'Cita_idCita' => $cita->idCita,
-                'Usuario_idUsuario' => $idCliente,
-            ]);
+            if ($request->input('modalidad_pago') === 'En línea') {
+                factura::create([
+                    'numero_factura' => 'TEMP',
+                    'fecha_emision' => now(),
+                    'subtotal' => $totalPagar,
+                    'total_pagar' => $totalPagar,
+                    'metodo_pago' => $request->input('metodo_pago'),
+                    'estado_factura' => 'Pagada',
+                    'Cita_idCita' => $cita->idCita,
+                    'Usuario_idUsuario' => $idCliente,
+                ]);
+            }
 
             DB::commit();
 
@@ -315,8 +356,60 @@ class GestionCitasController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            return response()->json(['result' => 'error', 'message' => 'Error al crear la cita y factura', 'error' => $e->getMessage()], 500);
+            return response()->json(['result' => 'error', 'message' => 'Error al crear la cita y procesar el pago', 'error' => $e->getMessage()], 500);
         }
+    }
+
+    public function registrarPago(Request $request, int $id)
+    {
+        $datos = $request->validate([
+            'metodo_pago' => 'required|in:Efectivo,Nequi,Tarjeta,Transferencia',
+        ]);
+
+        return DB::transaction(function () use ($request, $id, $datos) {
+            $usuario = $request->user();
+            $cita = Citas::with('servicios')->lockForUpdate()->find($id);
+
+            if (! $cita) {
+                return response()->json(['message' => 'Cita no encontrada.'], 404);
+            }
+
+            $esAdministrador = $usuario?->roles?->Nombre_rol === 'Administrador';
+            $esBarberoAsignado = $usuario?->roles?->Nombre_rol === 'Barbero'
+                && (int) $cita->Usuario_idUsuarioBar === (int) $usuario->idUsuario;
+
+            if (! $esAdministrador && ! $esBarberoAsignado) {
+                return response()->json(['message' => 'No tienes permiso para registrar este pago.'], 403);
+            }
+
+            if (
+                $cita->modalidad_pago !== 'Presencial'
+                || $cita->estado_pago !== 'Pendiente'
+                || ! in_array($cita->estado, ['Confirmado', 'Finalizado'], true)
+                || $cita->factura()->exists()
+            ) {
+                return response()->json(['message' => 'Esta cita no tiene un pago presencial pendiente.'], 422);
+            }
+
+            $total = $cita->servicios->sum(fn ($servicio) => (float) $servicio->Precio);
+
+            $cita->update(['estado_pago' => 'Pagado']);
+            factura::create([
+                'numero_factura' => 'TEMP',
+                'fecha_emision' => now(),
+                'subtotal' => $total,
+                'total_pagar' => $total,
+                'metodo_pago' => $datos['metodo_pago'],
+                'estado_factura' => 'Pagada',
+                'Cita_idCita' => $cita->idCita,
+                'Usuario_idUsuario' => $cita->Usuario_idUsuarioCli,
+            ]);
+
+            return response()->json([
+                'message' => 'Pago registrado y factura creada.',
+                'cita' => $cita->load(['cliente', 'barbero', 'servicios', 'factura']),
+            ]);
+        });
     }
 
     public function update(Request $request, $id)

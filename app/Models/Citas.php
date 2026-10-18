@@ -7,17 +7,20 @@ use Illuminate\Database\Eloquent\Model;
 class Citas extends Model
 {
     public $table = 'cita';
+
     public $primaryKey = 'idCita';
+
     public $timestamps = false;
 
     public $fillable = [
         'Fecha_hora',
         'estado',
+        'estado_pago',
+        'modalidad_pago',
         'Valora_Idvalora',
         'Usuario_idUsuarioCli',
         'Usuario_idUsuarioBar',
     ];
-
 
     public function servicios()
     {
