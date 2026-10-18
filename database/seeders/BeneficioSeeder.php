@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class BeneficioSeeder extends Seeder
 {
@@ -12,29 +12,29 @@ class BeneficioSeeder extends Seeder
      */
     public function run(): void
     {
-        //
-        \DB::table('Beneficio')->insert([
+        $administrador = DB::table('usuario')->where('correo', 'admin@bookcut.com')->value('idUsuario');
+
+        foreach ([
             [
-                'titulo' => 'Descuento de Apertura',
-                'Tipo_beneficio' => 'Descuento 20%',
-                'Fecha_inicio' => '2026-07-01',
-                'Fecha_fin' => '2026-07-31',
-                'Usuario_idUsuario' => 1,
+                'titulo' => 'Descuento de temporada',
+                'Tipo_beneficio' => 'Descuento del 20% en servicios',
+                'Fecha_inicio' => now()->subDays(7)->toDateString(),
+                'Fecha_fin' => now()->addDays(30)->toDateString(),
             ],
             [
-                'titulo' => 'Servicio de Lavado Gratis',
-                'Tipo_beneficio' => 'Promocion 2x1 en Lavado de Cabello',
-                'Fecha_inicio' => '2026-08-01',
-                'Fecha_fin' => '2026-08-31',
-                'Usuario_idUsuario' => 2,
+                'titulo' => 'Promoción de referidos',
+                'Tipo_beneficio' => 'Descuento por referidos',
+                'Fecha_inicio' => now()->addDays(7)->toDateString(),
+                'Fecha_fin' => now()->addDays(45)->toDateString(),
             ],
-            [
-                'titulo' => 'Programa de Referidos',
-                'Tipo_beneficio' => 'Invita a un amigo y recibirán un descuento.',
-                'Fecha_inicio' => '2026-09-01',
-                'Fecha_fin' => '2026-09-30',
-                'Usuario_idUsuario' => 3,
-            ],
-        ]);
+        ] as $beneficio) {
+            DB::table('beneficio')->updateOrInsert(
+                [
+                    'titulo' => $beneficio['titulo'],
+                    'Usuario_idUsuario' => $administrador,
+                ],
+                [...$beneficio, 'Usuario_idUsuario' => $administrador],
+            );
+        }
     }
 }

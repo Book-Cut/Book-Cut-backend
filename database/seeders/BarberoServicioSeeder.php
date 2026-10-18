@@ -2,9 +2,8 @@
 
 namespace Database\Seeders;
 
-use DB;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class BarberoServicioSeeder extends Seeder
 {
@@ -13,14 +12,24 @@ class BarberoServicioSeeder extends Seeder
      */
     public function run(): void
     {
-        //
-        DB::table('barbero_servicio_table')->insert([
-            ['Usuario_idUsuarioBar' => 2, 'idServicio' => 1],
-            ['Usuario_idUsuarioBar' => 3, 'idServicio' => 2],
-            ['Usuario_idUsuarioBar' => 2, 'idServicio' => 3],
-            ['Usuario_idUsuarioBar' => 3, 'idServicio' => 1],
-            ['Usuario_idUsuarioBar' => 2, 'idServicio' => 2],
-            ['Usuario_idUsuarioBar' => 3, 'idServicio' => 3],
-        ]);
+        $barberos = DB::table('usuario')
+            ->whereIn('correo', ['carlos@bookcut.com', 'andres@bookcut.com'])
+            ->pluck('idUsuario', 'correo');
+        $servicios = DB::table('servicio')->pluck('idServicio', 'Nombre');
+
+        foreach ($barberos as $idBarbero) {
+            foreach ($servicios as $idServicio) {
+                DB::table('barbero_servicio_table')->updateOrInsert(
+                    [
+                        'Usuario_idUsuarioBar' => $idBarbero,
+                        'idServicio' => $idServicio,
+                    ],
+                    [
+                        'Usuario_idUsuarioBar' => $idBarbero,
+                        'idServicio' => $idServicio,
+                    ],
+                );
+            }
+        }
     }
 }

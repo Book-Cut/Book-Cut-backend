@@ -7,9 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 class Factura extends Model
 {
     public $primaryKey = 'idfactura';
-    public $table = 'factura';
-    public $timestamps = false;
 
+    public $table = 'factura';
+
+    public $timestamps = false;
 
     public $fillable = [
         'numero_factura',
@@ -23,14 +24,12 @@ class Factura extends Model
 
     ];
 
-
     protected $casts = [
         'subtotal' => 'float',
         'total_pagar' => 'float',
         'Cita_idCita' => 'integer',
         'Usuario_idUsuario' => 'integer',
     ];
-
 
     protected static function boot()
     {
@@ -41,11 +40,19 @@ class Factura extends Model
         });
 
         static::created(function ($factura) {
-            $factura->numero_factura = 'FAC-' . str_pad($factura->idfactura, 3, '0', STR_PAD_LEFT);
+            $numero = $factura->idfactura;
+
+            do {
+                $numeroFactura = 'FAC-'.str_pad($numero, 3, '0', STR_PAD_LEFT);
+                $numero++;
+            } while (static::where('numero_factura', $numeroFactura)
+                ->where('idfactura', '!=', $factura->idfactura)
+                ->exists());
+
+            $factura->numero_factura = $numeroFactura;
             $factura->save();
         });
     }
-
 
     public function cita()
     {

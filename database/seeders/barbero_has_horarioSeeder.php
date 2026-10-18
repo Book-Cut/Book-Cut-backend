@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class barbero_has_horarioSeeder extends Seeder
 {
@@ -12,52 +12,25 @@ class barbero_has_horarioSeeder extends Seeder
      */
     public function run(): void
     {
-        //
-        \DB::table('barbero_has_horario')->insert([
-            [
-                'horario_idhorario' => 1,
-                'Usuario_idUsuarioBar' => 2,
-            ],
-            [
-                'horario_idhorario' => 2,
-                'Usuario_idUsuarioBar' => 2,
-            ],
-            [
-                'horario_idhorario' => 3,
-                'Usuario_idUsuarioBar' => 2,
-            ],
-            [
-                'horario_idhorario' => 4,
-                'Usuario_idUsuarioBar' => 2,
-            ],
-            [
-                'horario_idhorario' => 5,
-                'Usuario_idUsuarioBar' => 2,
-            ],
-            [
-                'horario_idhorario' => 6,
-                'Usuario_idUsuarioBar' => 2,
-            ],
-            [
-                'horario_idhorario' => 2,
-                'Usuario_idUsuarioBar' => 3,
-            ],
-            [
-                'horario_idhorario' => 3,
-                'Usuario_idUsuarioBar' => 3,
-            ],
-            [
-                'horario_idhorario' => 4,
-                'Usuario_idUsuarioBar' => 3,
-            ],
-            [
-                'horario_idhorario' => 5,
-                'Usuario_idUsuarioBar' => 3,
-            ],
-            [
-                'horario_idhorario' => 6,
-                'Usuario_idUsuarioBar' => 3,
-            ],
-        ]);
+        $horarios = DB::table('horario')->pluck('idhorario', 'diasemana');
+        $barberos = DB::table('usuario')->whereIn('correo', ['carlos@bookcut.com', 'andres@bookcut.com'])->pluck('idUsuario', 'correo');
+
+        foreach ([
+            'carlos@bookcut.com' => ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
+            'andres@bookcut.com' => ['Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
+        ] as $correo => $dias) {
+            foreach ($dias as $dia) {
+                DB::table('barbero_has_horario')->updateOrInsert(
+                    [
+                        'horario_idhorario' => $horarios[$dia],
+                        'Usuario_idUsuarioBar' => $barberos[$correo],
+                    ],
+                    [
+                        'horario_idhorario' => $horarios[$dia],
+                        'Usuario_idUsuarioBar' => $barberos[$correo],
+                    ],
+                );
+            }
+        }
     }
 }
