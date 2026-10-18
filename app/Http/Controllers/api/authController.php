@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\usuario;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -75,5 +78,52 @@ class AuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(['result' => 'ok', 'message' => 'Sesión cerrada exitosamente'], 200);
+    }
+
+    public function forgotPassword(Request $request)
+    {
+        $request->validate(['correo' => 'required|email']);
+
+        $user = usuario::where('correo', $request->correo)->first();
+
+        if ($user) {
+            $token = Str::random(64);
+            DB::table('password_reset_tokens')->updateOrInsert(
+                ['email' => $user->correo],
+                ['token' => Hash::make($token), 'created_at' => now()]
+            );
+
+            $url = rtrim(env('FRONTEND_URL', 'http://localhost:5173'), '/'). '/restablecer?token=' . $token . '&correo=' . urlencode($user->correo);
+
+            Mail::raw("Hola {$user->Nombre},\n\nRestablece tu contraseña aquí (válido 60 min):\n$url\n\nSi no fuiste tú, ignora este correo.", function ($m) use ($user) {
+                $m->to($user->correo)->subject('Restablecer contraseña - Book&Cut');
+            });
+        }
+
+        return response()->json(['result' => 'ok,funciona', 'message' => 'si el correo es existente, se le enviara un enlace']);
+
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'correo' => 'required|email',
+            'token' => 'required|string',
+            'contrasenha' => 'required|string|min:6|confirmed',
+        ]);
+
+        $row = DB::table('password_reset_tokens')->where('email', $request->correo)->first();
+
+        if (!$row || !Hash::check($request->token, $row->token)
+            || now()->diffInMinutes($row->created_at) > 60) {
+            return response()->json(['result' => 'error', 'message' => 'Enlace invalido o ya expiro'], 422);
+        }
+
+        $user = usuario::where('correo', $request->correo)->firstOrFail();
+        $user->contrasenha = Hash::make($request->contrasenha);
+        $user->save();
+
+        DB::table('password_reset_tokens')->where('email', $request->correo)->delete();
+        return response()->json(['result' => 'ok', 'message' => 'Contraseña restablecida exitosamente'], 200);
     }
 }
