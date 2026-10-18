@@ -11,11 +11,10 @@ class facturaSeeder extends Seeder
     {
         $citas = DB::table('cita')
             ->join('factura', 'factura.Cita_idCita', '=', 'cita.idCita')
-            ->where('factura.numero_factura', 'like', 'SEED-BOOKCUT-%')
+            ->whereBetween('factura.numero_factura', ['FAC-001', 'FAC-006'])
             ->select(
                 'cita.idCita',
                 'cita.Fecha_hora',
-                'cita.estado',
                 'cita.Usuario_idUsuarioCli',
                 'factura.numero_factura',
             )
@@ -26,20 +25,13 @@ class facturaSeeder extends Seeder
                 ->join('servicio', 'servicio.idServicio', '=', 'cita_servicio.idServicio')
                 ->where('cita_servicio.idCita', $cita->idCita)
                 ->sum('servicio.Precio');
-            $estadoFactura = match ($cita->estado) {
-                'Cancelado' => 'Anulada',
-                'Finalizado' => 'Pagada',
-                default => 'Emitida',
-            };
-
             DB::table('factura')
                 ->where('numero_factura', $cita->numero_factura)
                 ->update([
                     'fecha_emision' => $cita->Fecha_hora,
                     'subtotal' => $subtotal,
                     'total_pagar' => $subtotal,
-                    'metodo_pago' => $cita->estado === 'Finalizado' ? 'Nequi' : 'Pendiente_Pago',
-                    'estado_factura' => $estadoFactura,
+                    'estado_factura' => 'Pagada',
                     'Cita_idCita' => $cita->idCita,
                     'Usuario_idUsuario' => $cita->Usuario_idUsuarioCli,
                 ]);

@@ -15,7 +15,7 @@ class ValoraSeeder extends Seeder
         $citasFinalizadas = DB::table('cita')
             ->join('factura', 'factura.Cita_idCita', '=', 'cita.idCita')
             ->where('cita.estado', 'Finalizado')
-            ->where('factura.numero_factura', 'like', 'SEED-BOOKCUT-%')
+            ->whereBetween('factura.numero_factura', ['FAC-001', 'FAC-006'])
             ->select('cita.idCita', 'cita.Fecha_hora', 'cita.Valora_Idvalora')
             ->get();
 

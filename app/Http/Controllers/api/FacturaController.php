@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Factura;
 use App\Models\Citas;
-use Illuminate\Support\Facades\Validator;
+use App\Models\Factura;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class FacturaController extends Controller
 {
@@ -18,12 +20,15 @@ class FacturaController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->roles) {
+        if (! $user || ! $user->roles) {
             return response()->json(['result' => 'error', 'message' => 'Rol no definido'], 403);
         }
 
-
-        $query = Factura::with(['usuario:idUsuario,Nombre,correo', 'cita.servicios']);
+        $query = Factura::with([
+            'cita.cliente:idUsuario,Nombre,correo',
+            'cita.barbero:idUsuario,Nombre',
+            'cita.servicios:idServicio,Nombre',
+        ]);
 
         if ($user->roles->Nombre_rol === 'Administrador') {
             return response()->json($query->get(), 200);
@@ -34,6 +39,63 @@ class FacturaController extends Controller
         }
 
         return response()->json(['result' => 'error', 'message' => 'Sin permisos'], 403);
+    }
+
+    public function estadisticas(Request $request)
+    {
+        $user = Auth::user();
+        if (! $user || ! $user->roles || $user->roles->Nombre_rol !== 'Administrador') {
+            return response()->json(['message' => 'No tienes permiso para consultar las estadísticas.'], 403);
+        }
+
+        $datos = $request->validate([
+            'mes' => 'sometimes|date_format:Y-m',
+            'desde' => 'sometimes|required_with:hasta|date_format:Y-m-d',
+            'hasta' => 'sometimes|required_with:desde|date_format:Y-m-d|after_or_equal:desde',
+        ]);
+
+        if (isset($datos['mes']) && (isset($datos['desde']) || isset($datos['hasta']))) {
+            return response()->json(['message' => 'Elige un mes o un rango de fechas, no ambos.'], 422);
+        }
+        if (
+            (isset($datos['desde']) && ! isset($datos['hasta']))
+            || (! isset($datos['desde']) && isset($datos['hasta']))
+        ) {
+            return response()->json(['message' => 'Para filtrar por rango debes indicar las fechas desde y hasta.'], 422);
+        }
+
+        $facturas = Factura::query()->where('estado_factura', 'Pagada');
+        $citas = Citas::query();
+        $desde = null;
+        $hasta = null;
+
+        if (isset($datos['mes'])) {
+            $desde = CarbonImmutable::parse($datos['mes'].'-01')->startOfMonth();
+            $hasta = $desde->endOfMonth();
+        } elseif (isset($datos['desde'], $datos['hasta'])) {
+            $desde = CarbonImmutable::parse($datos['desde'])->startOfDay();
+            $hasta = CarbonImmutable::parse($datos['hasta'])->endOfDay();
+        }
+
+        if ($desde && $hasta) {
+            $facturas->whereBetween('fecha_emision', [$desde, $hasta]);
+            $citas->whereBetween('Fecha_hora', [$desde, $hasta]);
+        }
+
+        $cantidades = $citas
+            ->selectRaw('estado, COUNT(*) as cantidad')
+            ->groupBy('estado')
+            ->pluck('cantidad', 'estado');
+
+        return response()->json([
+            'gananciaTotal' => (float) $facturas->sum('total_pagar'),
+            'citas' => [
+                'Finalizado' => (int) ($cantidades['Finalizado'] ?? 0),
+                'Cancelado' => (int) ($cantidades['Cancelado'] ?? 0),
+                'Pendiente' => (int) ($cantidades['Pendiente'] ?? 0),
+                'Confirmado' => (int) ($cantidades['Confirmado'] ?? 0),
+            ],
+        ]);
     }
 
     /**
@@ -47,8 +109,8 @@ class FacturaController extends Controller
             'Cita_idCita' => 'required|exists:cita,idCita',
             'subtotal' => 'required|numeric|min:0',
             'total_pagar' => 'required|numeric|min:0',
-            'metodo_pago' => 'required|in:Efectivo,Tarjeta,Transferencia,Nequi,Pendiente_Pago',
-            'Usuario_idUsuario' => 'required|exists:usuario,idUsuario'
+            'metodo_pago' => 'required|in:Efectivo,Tarjeta,Transferencia,Nequi',
+            'Usuario_idUsuario' => 'required|exists:usuario,idUsuario',
         ], [
             'numero_factura.required' => 'El número de factura es obligatorio',
             'numero_factura.unique' => 'El número de factura ya existe',
@@ -74,14 +136,22 @@ class FacturaController extends Controller
 
         $cita = Citas::find($request->Cita_idCita);
 
-
-        if ($cita->estado === 'Confirmado' && $cita->factura()->exists()) {
-            return response()->json(['result' => 'error', 'message' => 'La cita ya tiene una factura asociada'], 400);
-        } else if ($cita->estado !== 'Confirmado') {
-            return response()->json(['result' => 'error', 'message' => 'La cita no está confirmada, no se puede generar factura'], 400);
+        if (! $cita) {
+            return response()->json(['result' => 'error', 'message' => 'Cita no encontrada'], 404);
         }
 
-        $factura = Factura::create($validator->validated());
+        if ($cita->estado !== 'Confirmado' || $cita->estado_pago !== 'Pendiente' || $cita->factura()->exists()) {
+            return response()->json(['result' => 'error', 'message' => 'La cita no está pendiente de pago o ya tiene una factura'], 400);
+        }
+
+        $datosFactura = $validator->validated();
+        $datosFactura['estado_factura'] = 'Pagada';
+
+        $factura = DB::transaction(function () use ($datosFactura, $cita) {
+            $cita->update(['estado_pago' => 'Pagado']);
+
+            return Factura::create($datosFactura);
+        });
         $factura->load(['cita.servicios', 'usuario']);
 
         return response()->json(['result' => 'ok', 'message' => 'Factura creada correctamente', 'data' => $factura], 201);
@@ -95,10 +165,10 @@ class FacturaController extends Controller
         $factura = Factura::with([
             'usuario:idUsuario,Nombre,correo',
             'cita.servicios',
-            'cita.barbero:idUsuario,Nombre'
+            'cita.barbero:idUsuario,Nombre',
         ])->find($id);
 
-        if (!$factura) {
+        if (! $factura) {
             return response()->json(['result' => 'error', 'message' => 'Factura no encontrada'], 404);
         }
 
@@ -112,18 +182,18 @@ class FacturaController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->roles || $user->roles->Nombre_rol !== 'Administrador') {
+        if (! $user || ! $user->roles || $user->roles->Nombre_rol !== 'Administrador') {
             return response()->json(['result' => 'error', 'message' => 'No tienes permisos para actualizar facturas.'], 403);
         }
 
         $validator = Validator::make($request->all(), [
-            'numero_factura' => 'sometimes|required|unique:factura,numero_factura,' . $id . ',idfactura',
+            'numero_factura' => 'sometimes|required|unique:factura,numero_factura,'.$id.',idfactura',
             'fecha_emision' => 'sometimes|required|date',
             'Cita_idCita' => 'sometimes|required|exists:cita,idCita',
             'subtotal' => 'sometimes|required|numeric|min:0',
             'total_pagar' => 'sometimes|required|numeric|min:0',
-            'metodo_pago' => 'sometimes|required|in:Efectivo,Tarjeta,Transferencia,Nequi,Pendiente_Pago',
-            'Usuario_idUsuario' => 'sometimes|required|exists:usuario,idUsuario'
+            'metodo_pago' => 'sometimes|required|in:Efectivo,Tarjeta,Transferencia,Nequi',
+            'Usuario_idUsuario' => 'sometimes|required|exists:usuario,idUsuario',
         ], [
             'numero_factura.required' => 'El número de factura es obligatorio',
             'numero_factura.unique' => 'El número de factura ya existe',
@@ -137,7 +207,6 @@ class FacturaController extends Controller
             'total_pagar.required' => 'El total a pagar es obligatorio',
             'total_pagar.numeric' => 'El total a pagar debe ser un número',
             'total_pagar.min' => 'El total a pagar debe ser mayor o igual a 0',
-            'metodo_pago.required' => 'El método de pago es obligatorio',
             'metodo_pago.in' => 'El método de pago no es válido',
             'Usuario_idUsuario.required' => 'El ID del usuario es obligatorio',
             'Usuario_idUsuario.exists' => 'El ID del usuario no existe en la tabla usuario',
@@ -149,11 +218,21 @@ class FacturaController extends Controller
 
         $factura = Factura::find($id);
 
-        if (!$factura) {
+        if (! $factura) {
             return response()->json(['result' => 'error', 'message' => 'Factura no encontrada'], 404);
         }
 
-        $factura->update($validator->validated());
+        $datosFactura = $validator->validated();
+        if ($factura->estado_factura === 'Anulada' && $request->filled('metodo_pago')) {
+            return response()->json(['result' => 'error', 'message' => 'Una factura anulada no se puede volver a pagar.'], 422);
+        }
+        if ($request->filled('metodo_pago')) {
+            $datosFactura['estado_factura'] = 'Pagada';
+        }
+        $factura->update($datosFactura);
+        if ($request->filled('metodo_pago')) {
+            $factura->cita()->update(['estado_pago' => 'Pagado']);
+        }
         $factura->load(['cita.servicios', 'usuario']);
 
         return response()->json($factura, 200);
@@ -166,13 +245,13 @@ class FacturaController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->roles || $user->roles->Nombre_rol !== 'Administrador') {
+        if (! $user || ! $user->roles || $user->roles->Nombre_rol !== 'Administrador') {
             return response()->json(['result' => 'error', 'message' => 'No tienes permisos para eliminar facturas.'], 403);
         }
 
         $factura = Factura::find($id);
 
-        if (!$factura) {
+        if (! $factura) {
             return response()->json(['result' => 'error', 'message' => 'Factura no encontrada'], 404);
         }
 

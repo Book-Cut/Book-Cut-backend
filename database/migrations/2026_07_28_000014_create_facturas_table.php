@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         Schema::create('factura', function (Blueprint $table) {
@@ -13,8 +14,8 @@ return new class extends Migration {
             $table->dateTime('fecha_emision');
             $table->decimal('subtotal', 12, 2);
             $table->decimal('total_pagar', 12, 2);
-            $table->enum('metodo_pago', ['Efectivo', 'Nequi', 'Tarjeta', 'Transferencia', 'Pendiente_Pago'])->default('Pendiente_Pago');
-            $table->enum('estado_factura', ['Emitida', 'Anulada', 'Pagada'])->default('Emitida');
+            $table->enum('metodo_pago', ['Efectivo', 'Nequi', 'Tarjeta', 'Transferencia']);
+            $table->enum('estado_factura', ['Pagada', 'Anulada'])->default('Pagada');
             $table->unsignedBigInteger('Cita_idCita');
             $table->unsignedBigInteger('Usuario_idUsuario');
 
