@@ -16,7 +16,15 @@ class usuarioController extends Controller
         $barberos = usuario::query()
             ->where('Roles_IDRol', 2)
             ->orderBy('Nombre')
-            ->get(['idUsuario', 'Nombre', 'especialidad']);
+            ->get(['idUsuario', 'Nombre', 'especialidad'])
+            ->map(function ($barbero) {
+                $servicios = $barbero->especialidad()
+                    ->pluck('Nombre')
+                    ->implode(', ');
+                $barbero->especialidad = $servicios ?: $barbero->getOriginal('especialidad');
+
+                return $barbero;
+            });
 
         return response()->json(['data' => $barberos]);
     }
@@ -26,7 +34,7 @@ class usuarioController extends Controller
         $user = Auth::user();
         $user = $request->user();
 
-        if (!$user || !$user->roles) {
+        if (! $user || ! $user->roles) {
             return response()->json(['result' => 'error', 'message' => 'Rol no definido'], 403);
         }
 
@@ -69,10 +77,10 @@ class usuarioController extends Controller
 
     public function store(Request $request)
     {
-        if ($request->Roles_IDRol < 3 && !Auth::guard('sanctum')->check()) {
+        if ($request->Roles_IDRol < 3 && ! Auth::guard('sanctum')->check()) {
             return response()->json([
                 'result' => 'error',
-                'message' => 'No tienes permisos para crear usuarios con este rol. Solo administradores.'
+                'message' => 'No tienes permisos para crear usuarios con este rol. Solo administradores.',
             ], 401);
         }
 
@@ -101,7 +109,7 @@ class usuarioController extends Controller
             'Roles_IDRol.exists' => 'El rol seleccionado no es válido.',
             'terminos_aceptados.required' => 'Debes aceptar los términos y condiciones.',
             'terminos_aceptados.accepted' => 'Debes aceptar los términos y condiciones.',
-            'servicio.*.exists' => 'Uno de los servicios no existe.'
+            'servicio.*.exists' => 'Uno de los servicios no existe.',
         ]);
 
         if ($validator->fails()) {
@@ -141,14 +149,13 @@ class usuarioController extends Controller
 
         $usuario = usuario::create($datosUsuario);
 
-
         if ($usuario->Roles_IDRol == 2 && $request->has('servicios')) {
             $usuario->especialidades()->attach($request->servicios);
         }
 
         return response()->json([
             'result' => 'ok',
-            'data' => $usuario->load('especialidad')
+            'data' => $usuario->load('especialidad'),
         ], 201);
     }
 
@@ -156,7 +163,7 @@ class usuarioController extends Controller
     {
         $usuario = usuario::find($id);
 
-        if (!$usuario) {
+        if (! $usuario) {
             return response()->json(['result' => 'error', 'message' => 'Usuario no encontrado'], 404);
         }
         if ($usuario->roles->Nombre_rol === 'Administrador') {
@@ -169,7 +176,7 @@ class usuarioController extends Controller
     {
         $usuario = usuario::find($id);
 
-        if (!$usuario) {
+        if (! $usuario) {
             return response()->json(['result' => 'error', 'message' => 'Usuario no encontrado'], 404);
         }
 
@@ -177,7 +184,7 @@ class usuarioController extends Controller
 
         $validator = Validator::make($request->all(), [
             'Nombre' => 'required|string',
-            'correo' => 'sometimes|required|string|max:255|unique:usuario,correo,' . $usuario->idUsuario . ',idUsuario',
+            'correo' => 'sometimes|required|string|max:255|unique:usuario,correo,'.$usuario->idUsuario.',idUsuario',
             'telefono' => 'required|string|max:45',
             'contrasenha' => 'sometimes|string|min:6',
             'Roles_IDRol' => 'sometimes|required|exists:roles,idRol',
@@ -194,7 +201,7 @@ class usuarioController extends Controller
             'contrasenha.min' => 'La contrasenha debe tener al menos 6 caracteres.',
             'terminos_aceptados.required' => 'Debes aceptar los términos y condiciones.',
             'terminos_aceptados.accepted' => 'Debes aceptar los términos y condiciones.',
-            'Roles_IDRol.exists' => 'El rol seleccionado no es válido.'
+            'Roles_IDRol.exists' => 'El rol seleccionado no es válido.',
         ]);
 
         if ($validator->fails()) {
@@ -243,7 +250,7 @@ class usuarioController extends Controller
     {
         $usuario = usuario::find($id);
 
-        if (!$usuario) {
+        if (! $usuario) {
             return response()->json(['result' => 'error', 'message' => 'Usuario no encontrado'], 404);
         }
 

@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\Controller;
+use App\Models\horario;
 use App\Models\usuario;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 class PerfilController extends Controller
@@ -22,7 +25,12 @@ class PerfilController extends Controller
     public function update(Request $request): JsonResponse
     {
         $usuario = $request->user();
-        $datos = $request->validate([
+        $esBarbero = $usuario->roles?->Nombre_rol === 'Barbero';
+        if (! $esBarbero && ($request->has('servicio_id') || $request->has('horarios'))) {
+            return response()->json(['message' => 'Solo los barberos pueden modificar su especialidad y horarios.'], 403);
+        }
+
+        $reglas = [
             'Nombre' => ['required', 'string', 'max:255'],
             'correo' => [
                 'required',
@@ -33,17 +41,74 @@ class PerfilController extends Controller
             ],
             'telefono' => ['required', 'string', 'max:45'],
             'contrasenha' => ['nullable', 'string', 'min:6'],
-        ]);
+        ];
 
-        $usuario->Nombre = $datos['Nombre'];
-        $usuario->correo = $datos['correo'];
-        $usuario->telefono = $datos['telefono'];
-
-        if (! empty($datos['contrasenha'])) {
-            $usuario->contrasenha = Hash::make($datos['contrasenha']);
+        if ($esBarbero) {
+            $reglas['servicio_id'] = ['sometimes', 'nullable', 'integer', 'exists:servicio,idServicio'];
+            $reglas['horarios'] = ['sometimes', 'array', 'max:7'];
+            $reglas['horarios.*.diasemana'] = [
+                'required',
+                'string',
+                'distinct',
+                Rule::in(['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']),
+            ];
+            $reglas['horarios.*.horainicio'] = ['required', 'date_format:H:i'];
+            $reglas['horarios.*.horafin'] = ['required', 'date_format:H:i'];
         }
 
-        $usuario->save();
+        $validador = Validator::make($request->all(), $reglas);
+        $validador->after(function ($validador) use ($request, $esBarbero) {
+            if (! $esBarbero || ! is_array($request->input('horarios'))) {
+                return;
+            }
+
+            foreach ($request->input('horarios') as $indice => $horario) {
+                if (
+                    isset($horario['horainicio'], $horario['horafin'])
+                    && $horario['horainicio'] >= $horario['horafin']
+                ) {
+                    $validador->errors()->add("horarios.$indice.horafin", 'La hora de fin debe ser posterior a la hora de inicio.');
+                }
+            }
+        });
+
+        $datos = $validador->validate();
+        $horarios = $datos['horarios'] ?? null;
+        $actualizarServicio = array_key_exists('servicio_id', $datos);
+        $servicioId = $datos['servicio_id'] ?? null;
+        unset($datos['horarios'], $datos['servicio_id']);
+
+        DB::transaction(function () use ($usuario, $datos, $horarios, $servicioId, $actualizarServicio) {
+            $usuario->Nombre = $datos['Nombre'];
+            $usuario->correo = $datos['correo'];
+            $usuario->telefono = $datos['telefono'];
+
+            if (! empty($datos['contrasenha'])) {
+                $usuario->contrasenha = Hash::make($datos['contrasenha']);
+            }
+
+            $usuario->save();
+
+            if ($actualizarServicio) {
+                $usuario->especialidad()->sync($servicioId ? [$servicioId] : []);
+                $usuario->especialidad = $servicioId ? (string) $servicioId : null;
+                $usuario->save();
+            }
+
+            if ($horarios !== null) {
+                $idsHorarios = collect($horarios)->map(function ($horario) {
+                    return horario::firstOrCreate([
+                        'diasemana' => $horario['diasemana'],
+                        'horainicio' => $horario['horainicio'].':00',
+                        'horafin' => $horario['horafin'].':00',
+                    ])->idhorario;
+                });
+
+                $usuario->horariosLaborales()->sync($idsHorarios);
+            }
+        });
+
+        $usuario->load('horariosLaborales');
 
         return response()->json([
             'message' => 'Perfil actualizado correctamente.',
@@ -54,12 +119,21 @@ class PerfilController extends Controller
     private function datosPerfil(usuario $usuario): array
     {
         $foto = $usuario->foto_perfil;
+        $esBarbero = $usuario->roles?->Nombre_rol === 'Barbero';
 
         return [
             'idUsuario' => $usuario->idUsuario,
             'Nombre' => $usuario->Nombre,
             'correo' => $usuario->correo,
             'telefono' => $usuario->telefono,
+            'servicio_id' => $esBarbero ? $usuario->especialidad()->value('servicio.idServicio') : null,
+            'horarios' => $esBarbero
+                ? $usuario->horariosLaborales->map(fn ($horario) => [
+                    'diasemana' => $horario->diasemana,
+                    'horainicio' => substr($horario->horainicio, 0, 5),
+                    'horafin' => substr($horario->horafin, 0, 5),
+                ])->values()
+                : [],
             'foto_perfil' => $foto && ! str_starts_with($foto, 'http')
                 ? Storage::disk('public')->url($foto)
                 : $foto,
