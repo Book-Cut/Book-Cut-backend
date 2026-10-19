@@ -17,8 +17,8 @@ return new class extends Migration
             $table->string('Tipo_beneficio', 50)->nullable();
             $table->date('Fecha_inicio')->nullable();
             $table->date('Fecha_fin')->nullable();
+            $table->string('imagen')->nullable();
             $table->unsignedBigInteger('Usuario_idUsuario');
-
             $table->foreign('Usuario_idUsuario')->references('idUsuario')->on('Usuario');
         });
     }

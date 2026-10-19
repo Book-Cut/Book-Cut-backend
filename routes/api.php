@@ -21,6 +21,7 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 Route::post('/usuarios', [usuarioController::class, 'store']);
 Route::get('/servicios', [ServicioController::class, 'index']);
 Route::get('/barberos', [usuarioController::class, 'barberos']);
+Route::get('/beneficios-vigentes', [BeneficiosController::class, 'vigentes']);
 
 Route::middleware('auth:sanctum')->group(function () {
 

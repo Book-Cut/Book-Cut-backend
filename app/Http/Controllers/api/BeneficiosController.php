@@ -47,6 +47,7 @@ class BeneficiosController extends Controller
                 'Fecha_inicio' => 'required|date',
                 'Fecha_fin' => 'required|date|after_or_equal:Fecha_inicio',
                 'Usuario_idUsuario' => 'required',
+                'imagen' => 'nullable|image|max:2048',
             ], [
                 'titulo.required' => 'El campo titulo es obligatorio.',
                 'Tipo_beneficio.required' => 'El campo Tipo_beneficio es obligatorio.',
@@ -58,8 +59,11 @@ class BeneficiosController extends Controller
                 'Usuario_idUsuario.required' => 'El campo Usuario_idUsuario es obligatorio.',
             ]);
 
-        $beneficios = beneficios::create($request->all());
-        return response()->json(['result' => 'ok', 'message' => 'Beneficio creado correctamente', 'beneficios' => $beneficios], 201);
+        $data = $request->except('imagen');
+        if ($request->hasFile('imagen')) {
+            $data['imagen'] = $request->file('imagen')->store('beneficios', 'public');
+        }
+        $beneficios = beneficios::create($data);
     }
 
     /**
@@ -100,16 +104,22 @@ class BeneficiosController extends Controller
             'Fecha_inicio' => 'required|date',
             'Fecha_fin' => 'required|date|after_or_equal:Fecha_inicio',
             'Usuario_idUsuario' => 'required',
+            'imagen' => 'nullable|image|max:2048',
         ]);
 
         $beneficios = beneficios::find($id);
         if ($beneficios) {
-            $beneficios->update($request->all());
+            $data = $request->except('imagen');
+            if ($request->hasFile('imagen')) {
+                $data['imagen'] = $request->file('imagen')->store('beneficios', 'public');
+            }
+            $beneficios -> update($data);
             return response()->json(['result' => 'ok', 'message' => 'Beneficio actualizado correctamente', 'beneficios' => $beneficios]);
         } else {
             return response()->json(['result' => 'error', 'message' => 'Beneficio no encontrado'], 404);
         }
     }
+    
 
     /**
      * Remove the specified resource from storage.
@@ -136,6 +146,15 @@ class BeneficiosController extends Controller
         } else {
             return response()->json(['result' => 'error', 'message' => 'Beneficio no encontrado'], 404);
         }
+    }
+
+    public function vigentes()
+    {
+        $hoy = now()->toDateString();
+        $data = beneficios::where('Fecha_inicio', '<=', $hoy)
+            ->where('Fecha_fin', '>=', $hoy)
+            ->whereNotNull('imagen')->get();
+        return response()->json(['result' => 'ok', 'data' => $data]);
     }
 }
 
