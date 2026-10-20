@@ -13,11 +13,17 @@ class beneficios extends Model
         'Tipo_beneficio',
         'Fecha_inicio',
         'Fecha_fin',
+        'imagen',
         'Usuario_idUsuario',
     ];
+
+    protected $appends = ['imagen_url'];
 
     public $timestamps = false;
 
     public $table = 'beneficio';
 
+    public function getImagenUrlAttribute(){
+        return $this->imagen ? asset('storage/' . $this->imagen) : null;
+    }
 }
