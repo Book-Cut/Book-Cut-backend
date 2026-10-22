@@ -77,7 +77,7 @@ class usuarioController extends Controller
 
     public function store(Request $request)
     {
-        if ($request->Roles_IDRol < 3 && ! Auth::guard('sanctum')->check()) {
+        if (!Auth::guard('sanctum')->check()) {
             return response()->json([
                 'result' => 'error',
                 'message' => 'No tienes permisos para crear usuarios con este rol. Solo administradores.',

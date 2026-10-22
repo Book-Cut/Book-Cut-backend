@@ -23,7 +23,6 @@ return new class extends Migration {
                 $table->string('horario', 45)->nullable()->default("null");
                 $table->unsignedBigInteger('Roles_IDRol');
 
-                $table->primary('idUsuario');
                 $table->foreign('Roles_IDRol')->references('iDRol')->on('roles');
             });
 

@@ -26,7 +26,7 @@ class PerfilController extends Controller
     {
         $usuario = $request->user();
         $esBarbero = $usuario->roles?->Nombre_rol === 'Barbero';
-        if (! $esBarbero && ($request->has('servicio_id') || $request->has('horarios'))) {
+        if (! $esBarbero && ($request->has('servicio_ids') || $request->has('horarios'))) {
             return response()->json(['message' => 'Solo los barberos pueden modificar su especialidad y horarios.'], 403);
         }
 
@@ -44,7 +44,8 @@ class PerfilController extends Controller
         ];
 
         if ($esBarbero) {
-            $reglas['servicio_id'] = ['sometimes', 'nullable', 'integer', 'exists:servicio,idServicio'];
+            $reglas['servicio_ids'] = ['sometimes', 'array'];
+            $reglas['servicio_ids.*'] = ['integer', 'exists:servicio,idServicio'];
             $reglas['horarios'] = ['sometimes', 'array', 'max:7'];
             $reglas['horarios.*.diasemana'] = [
                 'required',
@@ -74,11 +75,11 @@ class PerfilController extends Controller
 
         $datos = $validador->validate();
         $horarios = $datos['horarios'] ?? null;
-        $actualizarServicio = array_key_exists('servicio_id', $datos);
-        $servicioId = $datos['servicio_id'] ?? null;
-        unset($datos['horarios'], $datos['servicio_id']);
+        $actualizarServicio = array_key_exists('servicio_ids', $datos);
+        $servicioIds = collect($datos['servicio_ids'] ?? [])->flatten()->map('intval')->unique()->values()->all();
+        unset($datos['horarios'], $datos['servicio_ids']);
 
-        DB::transaction(function () use ($usuario, $datos, $horarios, $servicioId, $actualizarServicio) {
+        DB::transaction(function () use ($usuario, $datos, $horarios, $servicioIds, $actualizarServicio) {
             $usuario->Nombre = $datos['Nombre'];
             $usuario->correo = $datos['correo'];
             $usuario->telefono = $datos['telefono'];
@@ -90,8 +91,8 @@ class PerfilController extends Controller
             $usuario->save();
 
             if ($actualizarServicio) {
-                $usuario->especialidad()->sync($servicioId ? [$servicioId] : []);
-                $usuario->especialidad = $servicioId ? (string) $servicioId : null;
+                $usuario->especialidad()->sync($servicioIds);
+                $usuario->especialidad = $servicioIds ? implode(',', $servicioIds) : null;
                 $usuario->save();
             }
 
@@ -126,7 +127,9 @@ class PerfilController extends Controller
             'Nombre' => $usuario->Nombre,
             'correo' => $usuario->correo,
             'telefono' => $usuario->telefono,
-            'servicio_id' => $esBarbero ? $usuario->especialidad()->value('servicio.idServicio') : null,
+            'servicio_ids' => $esBarbero
+            ? $usuario->especialidad()->pluck('servicio.idServicio')->values()
+            : [],
             'horarios' => $esBarbero
                 ? $usuario->horariosLaborales->map(fn ($horario) => [
                     'diasemana' => $horario->diasemana,
