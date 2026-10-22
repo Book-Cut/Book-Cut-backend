@@ -12,7 +12,7 @@ class CitasController extends Controller
     {
         $user = Auth::user();
 
-        if (! $user || ! $user->roles) {
+        if (!$user || !$user->roles) {
             return response()->json(['result' => 'error', 'message' => 'Rol no definido'], 403);
         }
 
@@ -20,7 +20,8 @@ class CitasController extends Controller
             'cliente:idUsuario,Nombre,correo,telefono',
             'barbero:idUsuario,Nombre,correo,telefono,especialidad',
             'servicios',
-            'factura',
+            'factura.beneficio',
+            'valora',
         ]);
 
         if ($user->roles->Nombre_rol === 'Administrador') {

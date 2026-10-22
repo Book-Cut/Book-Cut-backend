@@ -11,10 +11,11 @@ class Valora extends Model
 
     public $fillable = [
         'Idvalora',
-        'Evaluacion_(Barbero)_idEvaluacion_Bar',
-        'Evaluacion_(Cliente)_idEvaluacion_cli',
+        'EvaluacionBar',
+        'EvaluacionCita',
+        'Comentario',
         'Fecha_evaluacion_bar',
-        'Fecha_evaluacion_cli',
+        'Fecha_evaluacion_cita',
     ];
     public $timestamps = false;
     public $table = 'valora';

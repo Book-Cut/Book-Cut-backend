@@ -21,6 +21,7 @@ class Factura extends Model
         'estado_factura',
         'Cita_idCita',
         'Usuario_idUsuario',
+        'Beneficio_ID_promocion',
 
     ];
 
@@ -43,11 +44,13 @@ class Factura extends Model
             $numero = $factura->idfactura;
 
             do {
-                $numeroFactura = 'FAC-'.str_pad($numero, 3, '0', STR_PAD_LEFT);
+                $numeroFactura = 'FAC-' . str_pad($numero, 3, '0', STR_PAD_LEFT);
                 $numero++;
-            } while (static::where('numero_factura', $numeroFactura)
-                ->where('idfactura', '!=', $factura->idfactura)
-                ->exists());
+            } while (
+                static::where('numero_factura', $numeroFactura)
+                    ->where('idfactura', '!=', $factura->idfactura)
+                    ->exists()
+            );
 
             $factura->numero_factura = $numeroFactura;
             $factura->save();
@@ -57,6 +60,11 @@ class Factura extends Model
     public function cita()
     {
         return $this->belongsTo(Citas::class, 'Cita_idCita', 'idCita');
+    }
+
+    public function beneficio()
+    {
+        return $this->belongsTo(beneficios::class, 'Beneficio_ID_promocion', 'ID_promocion');
     }
 
     public function usuario()
