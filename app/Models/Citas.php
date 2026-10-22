@@ -17,9 +17,12 @@ class Citas extends Model
         'estado',
         'estado_pago',
         'modalidad_pago',
+        'metodo_pago',
         'Valora_Idvalora',
         'Usuario_idUsuarioCli',
         'Usuario_idUsuarioBar',
+        'nombre_cliente',
+        'telefono_cliente',
     ];
 
     public function servicios()

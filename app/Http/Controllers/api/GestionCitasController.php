@@ -202,12 +202,38 @@ class GestionCitasController extends Controller
                 return response()->json(['message' => 'Solo se pueden finalizar citas confirmadas.'], 422);
             }
 
+            if ($cita->modalidad_pago === 'En línea' && $cita->estado_pago === 'Pendiente') {
+                if (! in_array($cita->metodo_pago, ['Nequi', 'Tarjeta', 'Transferencia'], true)) {
+                    return response()->json(['message' => 'La cita no tiene un método de pago en línea válido.'], 422);
+                }
+
+                if ($cita->factura) {
+                    return response()->json(['message' => 'La cita ya tiene una factura asociada.'], 422);
+                }
+
+                $total = $cita->servicios->sum(fn ($servicio) => (float) $servicio->Precio);
+                factura::create([
+                    'numero_factura' => 'TEMP',
+                    'fecha_emision' => now(),
+                    'subtotal' => $total,
+                    'total_pagar' => $total,
+                    'metodo_pago' => $cita->metodo_pago,
+                    'estado_factura' => 'Pagada',
+                    'Cita_idCita' => $cita->idCita,
+                    'Usuario_idUsuario' => $cita->Usuario_idUsuarioCli,
+                ]);
+
+                $cita->estado_pago = 'Pagado';
+            }
+
             $cita->estado = 'Finalizado';
             $cita->save();
 
             return response()->json([
-                'message' => 'Cita finalizada correctamente.',
-                'cita' => $cita,
+                'message' => $cita->modalidad_pago === 'En línea' && $cita->estado_pago === 'Pagado'
+                    ? 'Cita finalizada, pago registrado y factura creada.'
+                    : 'Cita finalizada correctamente.',
+                'cita' => $cita->load(['cliente', 'barbero', 'servicios', 'factura']),
             ]);
         });
     }
@@ -219,6 +245,8 @@ class GestionCitasController extends Controller
             'Fecha_hora' => 'required|date',
             'Usuario_idUsuarioBar' => 'required|exists:usuario,idUsuario',
             'Usuario_idUsuarioCli' => 'nullable|exists:usuario,idUsuario',
+            'nombre_cliente' => 'required|string|max:255',
+            'telefono_cliente' => 'required|string|max:45',
             'es_continuo' => 'required|boolean',
             'modalidad_pago' => 'required|in:En línea,Presencial',
             'metodo_pago' => 'required_if:modalidad_pago,En línea|prohibited_unless:modalidad_pago,En línea|in:Nequi,Tarjeta,Transferencia',
@@ -231,6 +259,12 @@ class GestionCitasController extends Controller
             'Usuario_idUsuarioBar.required' => 'El campo Usuario_idUsuarioBar es obligatorio.',
             'Usuario_idUsuarioBar.exists' => 'El barbero seleccionado no existe.',
             'Usuario_idUsuarioCli.exists' => 'El cliente seleccionado no existe.',
+            'nombre_cliente.required' => 'El nombre del cliente es obligatorio.',
+            'nombre_cliente.string' => 'El nombre del cliente debe ser texto.',
+            'nombre_cliente.max' => 'El nombre del cliente no puede superar 255 caracteres.',
+            'telefono_cliente.required' => 'El teléfono del cliente es obligatorio.',
+            'telefono_cliente.string' => 'El teléfono del cliente debe ser texto.',
+            'telefono_cliente.max' => 'El teléfono del cliente no puede superar 45 caracteres.',
             'es_continuo.required' => 'El campo es_continuo es obligatorio.',
             'es_continuo.boolean' => 'El campo es_continuo debe ser verdadero o falso.',
             'servicios.required' => 'Debe seleccionar al menos un servicio.',
@@ -315,39 +349,24 @@ class GestionCitasController extends Controller
             $cita = Citas::create([
                 'Fecha_hora' => $request->input('Fecha_hora'),
                 'estado' => 'Confirmado',
-                'estado_pago' => $request->input('modalidad_pago') === 'En línea' ? 'Pagado' : 'Pendiente',
+                'estado_pago' => 'Pendiente',
                 'modalidad_pago' => $request->input('modalidad_pago'),
+                'metodo_pago' => $request->input('metodo_pago'),
                 'Valora_Idvalora' => null,
                 'Usuario_idUsuarioCli' => $idCliente,
                 'Usuario_idUsuarioBar' => $request->input('Usuario_idUsuarioBar'),
+                'nombre_cliente' => $request->input('nombre_cliente'),
+                'telefono_cliente' => $request->input('telefono_cliente'),
             ]);
 
             $pivotData = [];
-            $totalPagar = 0;
-
             foreach ($serviciosInput as $srv) {
-                $servicioModel = $serviciosSeleccionados->get($srv['idServicio']);
-                $totalPagar += $servicioModel->Precio;
-
                 $pivotData[$srv['idServicio']] = [
                     'fecha_hora_servicio' => $horariosServicios[$srv['idServicio']],
                 ];
             }
 
             $cita->servicios()->attach($pivotData);
-
-            if ($request->input('modalidad_pago') === 'En línea') {
-                factura::create([
-                    'numero_factura' => 'TEMP',
-                    'fecha_emision' => now(),
-                    'subtotal' => $totalPagar,
-                    'total_pagar' => $totalPagar,
-                    'metodo_pago' => $request->input('metodo_pago'),
-                    'estado_factura' => 'Pagada',
-                    'Cita_idCita' => $cita->idCita,
-                    'Usuario_idUsuario' => $idCliente,
-                ]);
-            }
 
             DB::commit();
 
@@ -385,10 +404,10 @@ class GestionCitasController extends Controller
             if (
                 $cita->modalidad_pago !== 'Presencial'
                 || $cita->estado_pago !== 'Pendiente'
-                || ! in_array($cita->estado, ['Confirmado', 'Finalizado'], true)
+                || $cita->estado !== 'Finalizado'
                 || $cita->factura()->exists()
             ) {
-                return response()->json(['message' => 'Esta cita no tiene un pago presencial pendiente.'], 422);
+                return response()->json(['message' => 'Solo se puede registrar el pago presencial de una cita finalizada y pendiente de pago.'], 422);
             }
 
             $total = $cita->servicios->sum(fn ($servicio) => (float) $servicio->Precio);
