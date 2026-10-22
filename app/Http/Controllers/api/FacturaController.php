@@ -140,8 +140,8 @@ class FacturaController extends Controller
             return response()->json(['result' => 'error', 'message' => 'Cita no encontrada'], 404);
         }
 
-        if ($cita->estado !== 'Confirmado' || $cita->estado_pago !== 'Pendiente' || $cita->factura()->exists()) {
-            return response()->json(['result' => 'error', 'message' => 'La cita no está pendiente de pago o ya tiene una factura'], 400);
+        if ($cita->estado !== 'Finalizado' || $cita->estado_pago !== 'Pendiente' || $cita->factura()->exists()) {
+            return response()->json(['result' => 'error', 'message' => 'Solo se puede facturar una cita finalizada y pendiente de pago'], 400);
         }
 
         $datosFactura = $validator->validated();
