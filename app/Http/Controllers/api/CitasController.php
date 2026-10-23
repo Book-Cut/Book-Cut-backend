@@ -21,6 +21,7 @@ class CitasController extends Controller
             'barbero:idUsuario,Nombre,correo,telefono,especialidad',
             'servicios',
             'factura.beneficio',
+            'facturas.beneficio',
             'valora',
         ]);
 

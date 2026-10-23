@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\beneficios;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 
 
@@ -39,25 +41,7 @@ class BeneficiosController extends Controller
             ], 403);
         }
 
-        $request
-
-            ->validate([
-                'titulo' => 'required',
-                'Tipo_beneficio' => 'required',
-                'Fecha_inicio' => 'required|date',
-                'Fecha_fin' => 'required|date|after_or_equal:Fecha_inicio',
-                'Usuario_idUsuario' => 'required',
-                'imagen' => 'nullable|image|max:2048',
-            ], [
-                'titulo.required' => 'El campo titulo es obligatorio.',
-                'Tipo_beneficio.required' => 'El campo Tipo_beneficio es obligatorio.',
-                'Fecha_inicio.required' => 'El campo Fecha_inicio es obligatorio.',
-                'Fecha_inicio.date' => 'El campo Fecha_inicio debe ser una fecha válida.',
-                'Fecha_fin.required' => 'El campo Fecha_fin es obligatorio.',
-                'Fecha_fin.date' => 'El campo Fecha_fin debe ser una fecha válida.',
-                'Fecha_fin.after_or_equal' => 'El campo Fecha_fin debe ser una fecha posterior o igual a Fecha_inicio.',
-                'Usuario_idUsuario.required' => 'El campo Usuario_idUsuario es obligatorio.',
-            ]);
+        $this->validarBeneficio($request);
 
         $data = $request->except('imagen');
         if ($request->hasFile('imagen')) {
@@ -98,14 +82,7 @@ class BeneficiosController extends Controller
             ], 403);
         }
 
-        $request->validate([
-            'titulo' => 'required',
-            'Tipo_beneficio' => 'required',
-            'Fecha_inicio' => 'required|date',
-            'Fecha_fin' => 'required|date|after_or_equal:Fecha_inicio',
-            'Usuario_idUsuario' => 'required',
-            'imagen' => 'nullable|image|max:2048',
-        ]);
+        $this->validarBeneficio($request);
 
         $beneficios = beneficios::find($id);
         if ($beneficios) {
@@ -156,5 +133,40 @@ class BeneficiosController extends Controller
             ->whereNotNull('imagen')->get();
         return response()->json(['result' => 'ok', 'data' => $data]);
     }
-}
 
+    private function validarBeneficio(Request $request): void
+    {
+        $validator = Validator::make($request->all(), [
+            'titulo' => 'required',
+            'Tipo_beneficio' => 'required',
+            'Fecha_inicio' => 'required|date',
+            'Fecha_fin' => 'required|date|after_or_equal:Fecha_inicio',
+            'Usuario_idUsuario' => 'required',
+            'imagen' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:2048',
+        ], [
+            'titulo.required' => 'El campo título es obligatorio.',
+            'Tipo_beneficio.required' => 'El campo tipo es obligatorio.',
+            'Fecha_inicio.required' => 'El campo de inicio es obligatorio.',
+            'Fecha_inicio.date' => 'El campo de inicio debe ser una fecha válida.',
+            'Fecha_fin.required' => 'El campo de fin es obligatorio.',
+            'Fecha_fin.date' => 'El campo de fin debe ser una fecha válida.',
+            'Fecha_fin.after_or_equal' => 'La fecha de fin debe ser igual o posterior a la fecha de inicio.',
+            'Usuario_idUsuario.required' => 'No se pudo identificar al usuario administrador.',
+            'imagen.image' => 'La imagen debe estar en formato JPG, JPEG, PNG, WEBP o GIF.',
+            'imagen.mimes' => 'Formato de imagen no permitido. Usa JPG, JPEG, PNG, WEBP o GIF.',
+            'imagen.max' => 'La imagen no puede superar los 2 MB.',
+        ]);
+
+        if ($validator->fails() && $validator->errors()->has('imagen')) {
+            $archivo = $request->file('imagen');
+            Log::warning('Imagen de beneficio rechazada por validación.', [
+                'usuario_id' => Auth::id(),
+                'nombre_archivo' => $archivo?->getClientOriginalName(),
+                'tipo_mime' => $archivo?->getClientMimeType(),
+                'errores' => $validator->errors()->get('imagen'),
+            ]);
+        }
+
+        $validator->validate();
+    }
+}

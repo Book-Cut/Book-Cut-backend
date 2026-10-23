@@ -12,13 +12,7 @@ class ValoraController extends Controller
 {
     public function guardarValoracionCita(Request $request, string $id)
     {
-        $cita = Citas::find($id);
-
-        if (!$cita) {
-            return response()->json(['result' => 'error', 'message' => 'Cita no encontrada'], 404);
-        }
-
-        $request->validate([
+        $datos = $request->validate([
             'puntuacion' => 'required|integer|min:1|max:5',
             'comentario' => 'nullable|string|max:500',
         ], [
@@ -30,26 +24,51 @@ class ValoraController extends Controller
             'comentario.max' => 'El comentario no puede superar 500 caracteres',
         ]);
 
-        $valoracion = Valora::create([
-            'EvaluacionBar' => $request->puntuacion,
-            'EvaluacionCita' => $request->puntuacion,
-            'Fecha_evaluacion_bar' => now(),
-            'Fecha_evaluacion_cita' => now(),
-            'Comentario' => $request->comentario,
-        ]);
+        return DB::transaction(function () use ($request, $id, $datos) {
+            $cita = Citas::where('idCita', $id)->lockForUpdate()->first();
 
-        $cita->Valora_Idvalora = $valoracion->Idvalora;
-        $cita->save();
+            if (!$cita) {
+                return response()->json(['result' => 'error', 'message' => 'Cita no encontrada'], 404);
+            }
 
-        return response()->json([
-            'message' => 'Valoración creada correctamente',
-            'data' => [
-                'idValora' => $valoracion->Idvalora,
-                'puntuacion' => $valoracion->EvaluacionBar,
-                'comentario' => $valoracion->Comentario,
-                'fecha_valoracion' => $valoracion->Fecha_evaluacion_cita,
-            ],
-        ], 200);
+            $usuario = $request->user();
+            if (
+                !$usuario
+                || $usuario->roles?->Nombre_rol !== 'Cliente'
+                || (int) $cita->Usuario_idUsuarioCli !== (int) $usuario->idUsuario
+            ) {
+                return response()->json(['result' => 'error', 'message' => 'No tienes permiso para calificar esta cita'], 403);
+            }
+
+            if ($cita->estado !== 'Finalizado') {
+                return response()->json(['result' => 'error', 'message' => 'Solo puedes calificar una cita finalizada'], 422);
+            }
+
+            if ($cita->Valora_Idvalora) {
+                return response()->json(['result' => 'error', 'message' => 'Esta cita ya fue calificada'], 409);
+            }
+
+            $valoracion = Valora::create([
+                'EvaluacionBar' => $datos['puntuacion'],
+                'EvaluacionCita' => $datos['puntuacion'],
+                'Fecha_evaluacion_bar' => now(),
+                'Fecha_evaluacion_cita' => now(),
+                'Comentario' => $datos['comentario'] ?? null,
+            ]);
+
+            $cita->Valora_Idvalora = $valoracion->getKey();
+            $cita->save();
+
+            return response()->json([
+                'message' => 'Valoración creada correctamente',
+                'data' => [
+                    'idValora' => $valoracion->getKey(),
+                    'puntuacion' => $valoracion->EvaluacionBar,
+                    'comentario' => $valoracion->Comentario,
+                    'fecha_valoracion' => $valoracion->Fecha_evaluacion_cita,
+                ],
+            ], 200);
+        });
     }
 
     public function listarValoraciones()

@@ -12,6 +12,10 @@ class Citas extends Model
 
     public $timestamps = false;
 
+    protected $casts = [
+        'confirmacion_solicitada_at' => 'datetime',
+    ];
+
     public $fillable = [
         'Fecha_hora',
         'estado',
@@ -50,6 +54,11 @@ class Citas extends Model
     public function factura()
     {
         return $this->hasOne(factura::class, 'Cita_idCita', 'idCita');
+    }
+
+    public function facturas()
+    {
+        return $this->belongsToMany(factura::class, 'cita_factura', 'idCita', 'idfactura', 'idCita', 'idfactura');
     }
 
     public function getBarbero()
