@@ -18,6 +18,7 @@ class Citas extends Model
 
     public $fillable = [
         'Fecha_hora',
+        'fecha_agendada',
         'estado',
         'estado_pago',
         'modalidad_pago',

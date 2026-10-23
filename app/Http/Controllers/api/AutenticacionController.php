@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 
-class AuthController extends Controller
+class AutenticacionController extends Controller
 {
 
     public function register(Request $request)
@@ -159,8 +159,8 @@ class AuthController extends Controller
         ],
     ], now()->addMinutes(10));
 
-    Mail::raw("Tu codigo de verificacion es: $codigo\n\n Vence en 10 minutos.", function ($m) use ($request) {
-        $m->to($request->correo)->subject('Codigo de Verificacion - Book&Cut');
+    Mail::send('correos.codigo-verificacion', ['codigo' => $codigo], function ($mensaje) use ($request) {
+        $mensaje->to($request->correo)->subject('Verifica tu cuenta - Book&Cut');
     });
 
     return response()->json(['result'=> 'ok', 'message'=> 'Codigo enviado']);
