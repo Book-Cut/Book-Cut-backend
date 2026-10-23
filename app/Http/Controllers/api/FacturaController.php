@@ -27,10 +27,10 @@ class FacturaController extends Controller
         $query = Factura::with([
             'cita.cliente:idUsuario,Nombre,correo',
             'cita.barbero:idUsuario,Nombre',
-            'cita.servicios:idServicio,Nombre',
+            'cita.servicios:idServicio,Nombre,Precio,Duracion',
             'citas.cliente:idUsuario,Nombre,correo',
             'citas.barbero:idUsuario,Nombre',
-            'citas.servicios:idServicio,Nombre',
+            'citas.servicios:idServicio,Nombre,Precio,Duracion',
         ]);
 
         if ($user->roles->Nombre_rol === 'Administrador') {
