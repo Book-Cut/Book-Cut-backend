@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Valora extends Model
 {
     //
-    public $primaryKey = 'idvalora';
+    public $primaryKey = 'Idvalora';
 
     public $fillable = [
         'Idvalora',

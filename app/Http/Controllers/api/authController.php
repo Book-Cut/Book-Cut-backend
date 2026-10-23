@@ -95,14 +95,17 @@ class AuthController extends Controller
                 ['token' => Hash::make($token), 'created_at' => now()]
             );
 
-            $url = rtrim(env('FRONTEND_URL', 'http://localhost:5173'), '/'). '/restablecer?token=' . $token . '&correo=' . urlencode($user->correo);
+            $url = rtrim(config('app.frontend_url'), '/'). '/restablecer?token=' . $token . '&correo=' . urlencode($user->correo);
 
             Mail::raw("Hola {$user->Nombre},\n\nRestablece tu contraseña aquí (válido 60 min):\n$url\n\nSi no fuiste tú, ignora este correo.", function ($m) use ($user) {
                 $m->to($user->correo)->subject('Restablecer contraseña - Book&Cut');
             });
         }
 
-        return response()->json(['result' => 'ok,funciona', 'message' => 'si el correo es existente, se le enviara un enlace']);
+        return response()->json([
+            'result' => 'ok',
+            'message' => 'Si el correo está registrado, recibirás un enlace para cambiar tu contraseña. Revisa también la carpeta de spam.',
+        ]);
 
     }
 
@@ -116,8 +119,11 @@ class AuthController extends Controller
 
         $row = DB::table('password_reset_tokens')->where('email', $request->correo)->first();
 
-        if (!$row || !Hash::check($request->token, $row->token)
-            || now()->diffInMinutes($row->created_at) > 60) {
+        if (
+            ! $row
+            || ! Hash::check($request->token, $row->token)
+            || now()->greaterThan(\Illuminate\Support\Carbon::parse($row->created_at)->addMinutes(60))
+        ) {
             return response()->json(['result' => 'error', 'message' => 'Enlace invalido o ya expiro'], 422);
         }
 
@@ -176,7 +182,7 @@ public function verifyRegisterCode(Request $request)
         return response()->json(['result' => 'error', 'message' => 'muchos intentos, solicita otro codigo'], 429);
     }
 
-    if (!HasH::check($request->codigo, $registro['codigo'])) {
+    if (!Hash::check($request->codigo, $registro['codigo'])) {
         $registro['intentos']++;
         Cache::put($key, $registro, now()->addMinutes(10));
         return response()->json(['result' => 'error', 'message'  => 'el codigo es incorrecto'], 422);

@@ -30,6 +30,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/disponibilidad', [GestionCitasController::class, 'disponibilidad']);
     Route::patch('/citas/{id}/reagendar', [GestionCitasController::class, 'reagendar']);
+    Route::patch('/citas/{id}/confirmar-asistencia', [GestionCitasController::class, 'confirmarAsistencia']);
     Route::patch('/citas/{id}/finalizar', [GestionCitasController::class, 'finalizar'])->name('citas.finalizar');
     Route::get('/perfil', [PerfilController::class, 'show']);
     Route::patch('/perfil', [PerfilController::class, 'update']);

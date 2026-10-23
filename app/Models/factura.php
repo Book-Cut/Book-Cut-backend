@@ -62,6 +62,11 @@ class Factura extends Model
         return $this->belongsTo(Citas::class, 'Cita_idCita', 'idCita');
     }
 
+    public function citas()
+    {
+        return $this->belongsToMany(Citas::class, 'cita_factura', 'idfactura', 'idCita', 'idfactura', 'idCita');
+    }
+
     public function beneficio()
     {
         return $this->belongsTo(beneficios::class, 'Beneficio_ID_promocion', 'ID_promocion');

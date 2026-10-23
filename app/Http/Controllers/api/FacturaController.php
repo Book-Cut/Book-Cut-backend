@@ -28,6 +28,9 @@ class FacturaController extends Controller
             'cita.cliente:idUsuario,Nombre,correo',
             'cita.barbero:idUsuario,Nombre',
             'cita.servicios:idServicio,Nombre',
+            'citas.cliente:idUsuario,Nombre,correo',
+            'citas.barbero:idUsuario,Nombre',
+            'citas.servicios:idServicio,Nombre',
         ]);
 
         if ($user->roles->Nombre_rol === 'Administrador') {
@@ -140,7 +143,12 @@ class FacturaController extends Controller
             return response()->json(['result' => 'error', 'message' => 'Cita no encontrada'], 404);
         }
 
-        if ($cita->estado !== 'Finalizado' || $cita->estado_pago !== 'Pendiente' || $cita->factura()->exists()) {
+        if (
+            $cita->estado !== 'Finalizado'
+            || $cita->estado_pago !== 'Pendiente'
+            || $cita->factura()->exists()
+            || $cita->facturas()->exists()
+        ) {
             return response()->json(['result' => 'error', 'message' => 'Solo se puede facturar una cita finalizada y pendiente de pago'], 400);
         }
 
@@ -150,9 +158,12 @@ class FacturaController extends Controller
         $factura = DB::transaction(function () use ($datosFactura, $cita) {
             $cita->update(['estado_pago' => 'Pagado']);
 
-            return Factura::create($datosFactura);
+            $factura = Factura::create($datosFactura);
+            $factura->citas()->sync([$cita->idCita]);
+
+            return $factura;
         });
-        $factura->load(['cita.servicios', 'usuario']);
+        $factura->load(['cita.servicios', 'citas.servicios', 'usuario']);
 
         return response()->json(['result' => 'ok', 'message' => 'Factura creada correctamente', 'data' => $factura], 201);
     }
@@ -166,6 +177,9 @@ class FacturaController extends Controller
             'usuario:idUsuario,Nombre,correo',
             'cita.servicios',
             'cita.barbero:idUsuario,Nombre',
+            'citas.cliente:idUsuario,Nombre,correo',
+            'citas.barbero:idUsuario,Nombre',
+            'citas.servicios',
         ])->find($id);
 
         if (! $factura) {
@@ -231,9 +245,9 @@ class FacturaController extends Controller
         }
         $factura->update($datosFactura);
         if ($request->filled('metodo_pago')) {
-            $factura->cita()->update(['estado_pago' => 'Pagado']);
+            $factura->citas()->update(['estado_pago' => 'Pagado']);
         }
-        $factura->load(['cita.servicios', 'usuario']);
+        $factura->load(['cita.servicios', 'citas.servicios', 'usuario']);
 
         return response()->json($factura, 200);
     }
