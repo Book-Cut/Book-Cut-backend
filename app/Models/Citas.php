@@ -34,7 +34,12 @@ class Citas extends Model
     {
 
         return $this->belongsToMany(Servicio::class, 'cita_servicio', 'idCita', 'idServicio')
-            ->withPivot('fecha_hora_servicio');
+            ->withPivot(
+                'fecha_hora_servicio',
+                'nombre_servicio',
+                'duracion_servicio',
+                'precio_servicio',
+            );
     }
 
     public function valora()

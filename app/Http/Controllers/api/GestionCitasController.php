@@ -71,7 +71,7 @@ class GestionCitasController extends Controller
             foreach ($this->serviciosProgramados($citaExcluir) as $programado) {
                 $serviciosReagendados[] = [
                     'offset' => (int) (($programado['inicio']->getTimestamp() - $inicioOriginal->getTimestamp()) / 60),
-                    'duracion' => max(1, (int) $programado['servicio']->Duracion),
+                    'duracion' => max(1, $this->duracionServicio($programado['servicio'])),
                 ];
             }
         }
@@ -183,7 +183,7 @@ class GestionCitasController extends Controller
                 $servicio = $programado['servicio'];
                 $desplazamiento = (int) (($programado['inicio']->getTimestamp() - $inicioOriginal->getTimestamp()) / 60);
                 $inicioServicio = $inicioCita->modify('+'.$desplazamiento.' minutes');
-                $finServicio = $inicioServicio->modify('+'.max(1, (int) $servicio->Duracion).' minutes');
+                $finServicio = $inicioServicio->modify('+'.max(1, $this->duracionServicio($servicio)).' minutes');
 
                 if (! $this->estaDentroDelHorario($barbero, $inicioServicio, $finServicio)) {
                     return response()->json(['message' => 'La cita queda fuera del horario laboral del barbero.'], 422);
@@ -203,7 +203,7 @@ class GestionCitasController extends Controller
                 $horariosServicios[] = [
                     'idServicio' => $servicio->idServicio,
                     'fecha_hora_servicio' => $inicioServicio->format('Y-m-d H:i:s'),
-                ];
+                ] + $this->datosHistoricosServicio($servicio);
             }
 
             $cita->Fecha_hora = $inicioCita->format('Y-m-d H:i:s');
@@ -405,7 +405,7 @@ class GestionCitasController extends Controller
                 $inicioServicio = $esContinuo
                     ? $horaSiguiente
                     : new DateTimeImmutable($servicioInput['fecha_hora_servicio']);
-                $finServicio = $inicioServicio->modify('+'.max(1, (int) $servicioSeleccionado->Duracion).' minutes');
+                $finServicio = $inicioServicio->modify('+'.max(1, $this->duracionServicio($servicioSeleccionado)).' minutes');
                 $fechaServicio = $inicioServicio->format('Y-m-d');
 
                 if (! $this->estaDentroDelHorario($barbero, $inicioServicio, $finServicio)) {
@@ -430,7 +430,7 @@ class GestionCitasController extends Controller
                     'fecha_hora_servicio' => $inicioServicio->format('Y-m-d H:i:s'),
                     'inicio' => $inicioServicio,
                     'fin' => $finServicio,
-                ];
+                ] + $this->datosHistoricosServicio($servicioSeleccionado);
                 if ($esContinuo) {
                     $horaSiguiente = $finServicio;
                 }
@@ -456,6 +456,9 @@ class GestionCitasController extends Controller
             foreach ($serviciosAgendados as $servicioAgendado) {
                 $cita->servicios()->attach($servicioAgendado['idServicio'], [
                     'fecha_hora_servicio' => $servicioAgendado['fecha_hora_servicio'],
+                    'nombre_servicio' => $servicioAgendado['nombre_servicio'],
+                    'duracion_servicio' => $servicioAgendado['duracion_servicio'],
+                    'precio_servicio' => $servicioAgendado['precio_servicio'],
                 ]);
             }
             $citasCreadas = [$cita->load(['cliente', 'barbero', 'servicios', 'factura.cita.servicios', 'facturas'])];
@@ -578,7 +581,7 @@ class GestionCitasController extends Controller
     {
         $primeraCita = $citas->first();
         $total = $citas->sum(
-            fn ($citaGrupo) => $citaGrupo->servicios->sum(fn ($servicio) => (float) $servicio->Precio)
+            fn ($citaGrupo) => $citaGrupo->servicios->sum(fn ($servicio) => $this->precioServicio($servicio))
         );
 
         $factura = Factura::create([
@@ -602,7 +605,7 @@ class GestionCitasController extends Controller
         $facturas = $cita->facturas()->with('citas.servicios')->get();
         foreach ($facturas as $factura) {
             $total = $factura->citas->sum(
-                fn ($citaFactura) => $citaFactura->servicios->sum(fn ($servicio) => (float) $servicio->Precio)
+                fn ($citaFactura) => $citaFactura->servicios->sum(fn ($servicio) => $this->precioServicio($servicio))
             );
             $factura->update(['subtotal' => $total, 'total_pagar' => $total]);
         }
@@ -736,9 +739,11 @@ class GestionCitasController extends Controller
                     $idsServicios = array_column($request->input('servicios'), 'idServicio');
                     $catalogoServicios = Servicio::whereIn('idServicio', $idsServicios)->get()->keyBy('idServicio');
                     $servicios = collect($idsServicios)->map(fn ($idServicio) => $catalogoServicios->get($idServicio));
+                    $serviciosAnteriores = $cita->servicios;
                 } else {
                     $servicios = collect($this->serviciosProgramados($cita))->pluck('servicio');
                     $idsServicios = $servicios->pluck('idServicio')->all();
+                    $serviciosAnteriores = collect();
                 }
 
                 if ($servicios->isEmpty()) {
@@ -758,10 +763,12 @@ class GestionCitasController extends Controller
                 $intervalosPorFecha = [];
                 $horariosServicios = [];
                 foreach ($servicios as $servicio) {
+                    $servicioAnterior = $serviciosAnteriores->firstWhere('idServicio', $servicio->idServicio);
+                    $datosHistoricos = $this->datosHistoricosServicio($servicioAnterior ?? $servicio);
                     $desplazamientos[$servicio->idServicio] ??= [];
                     $desplazamiento = array_shift($desplazamientos[$servicio->idServicio]) ?? $desplazamientoSiguiente;
                     $inicioServicio = $inicioCita->modify('+'.$desplazamiento.' minutes');
-                    $finServicio = $inicioServicio->modify('+'.max(1, (int) $servicio->Duracion).' minutes');
+                    $finServicio = $inicioServicio->modify('+'.max(1, $datosHistoricos['duracion_servicio']).' minutes');
                     if (! $this->estaDentroDelHorario($barbero, $inicioServicio, $finServicio)) {
                         DB::rollBack();
 
@@ -787,10 +794,10 @@ class GestionCitasController extends Controller
                     $horariosServicios[] = [
                         'idServicio' => $servicio->idServicio,
                         'fecha_hora_servicio' => $inicioServicio->format('Y-m-d H:i:s'),
-                    ];
+                    ] + $datosHistoricos;
                     $desplazamientoSiguiente = max(
                         $desplazamientoSiguiente,
-                        $desplazamiento + max(1, (int) $servicio->Duracion)
+                        $desplazamiento + max(1, $datosHistoricos['duracion_servicio'])
                     );
                 }
                 $inicioMasTemprano = collect($horariosServicios)
@@ -906,7 +913,7 @@ class GestionCitasController extends Controller
             $inicio = $servicio->pivot->fecha_hora_servicio
                 ? new DateTimeImmutable($servicio->pivot->fecha_hora_servicio)
                 : $siguiente;
-            $fin = $inicio->modify('+'.max(1, (int) $servicio->Duracion).' minutes');
+            $fin = $inicio->modify('+'.max(1, $this->duracionServicio($servicio)).' minutes');
             $programados[] = compact('servicio', 'inicio', 'fin');
             $siguiente = $fin;
         }
@@ -916,6 +923,25 @@ class GestionCitasController extends Controller
                 ->sortBy(fn ($programado) => $programado['inicio']->getTimestamp())
                 ->all()
         );
+    }
+
+    private function duracionServicio(Servicio $servicio): int
+    {
+        return (int) ($servicio->pivot?->duracion_servicio ?? $servicio->Duracion);
+    }
+
+    private function precioServicio(Servicio $servicio): float
+    {
+        return (float) ($servicio->pivot?->precio_servicio ?? $servicio->Precio);
+    }
+
+    private function datosHistoricosServicio(Servicio $servicio): array
+    {
+        return [
+            'nombre_servicio' => $servicio->pivot?->nombre_servicio ?? $servicio->Nombre,
+            'duracion_servicio' => $this->duracionServicio($servicio),
+            'precio_servicio' => $this->precioServicio($servicio),
+        ];
     }
 
     private function horarioCorrespondeAlDia(string $diaHorario, DateTimeImmutable $fecha): bool
@@ -966,7 +992,7 @@ class GestionCitasController extends Controller
             if ($serviciosConHora->isNotEmpty()) {
                 foreach ($serviciosConHora as $servicio) {
                     $inicio = new DateTimeImmutable($servicio->pivot->fecha_hora_servicio);
-                    $fin = $inicio->modify('+'.max(1, (int) $servicio->Duracion).' minutes');
+                    $fin = $inicio->modify('+'.max(1, $this->duracionServicio($servicio)).' minutes');
                     $intervalos[] = [$inicio, $fin];
                 }
 
@@ -974,7 +1000,7 @@ class GestionCitasController extends Controller
             }
 
             $inicio = new DateTimeImmutable($cita->Fecha_hora);
-            $duracion = (int) $cita->servicios->sum('Duracion');
+            $duracion = $cita->servicios->sum(fn ($servicio) => $this->duracionServicio($servicio));
             $fin = $inicio->modify('+'.max(1, $duracion ?: 60).' minutes');
             $intervalos[] = [$inicio, $fin];
         }

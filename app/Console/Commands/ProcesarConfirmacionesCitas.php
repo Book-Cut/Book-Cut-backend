@@ -79,7 +79,8 @@ class ProcesarConfirmacionesCitas extends Command
                 'idNotificacion' => $notificacion,
                 'correo' => $cita->cliente?->correo,
                 'nombre' => $cita->cliente?->Nombre ?? 'cliente',
-                'fecha' => Carbon::parse($cita->Fecha_hora)->format('d/m/Y H:i'),
+                'fecha' => Carbon::parse($cita->Fecha_hora)->format('d/m/Y'),
+                'hora' => Carbon::parse($cita->Fecha_hora)->format('H:i'),
             ];
         });
 
@@ -168,7 +169,8 @@ class ProcesarConfirmacionesCitas extends Command
                 'tokenConfirmacion' => $tokenConfirmacion,
                 'correo' => $cita->cliente?->correo,
                 'nombre' => $cita->cliente?->Nombre ?? 'cliente',
-                'fecha' => Carbon::parse($cita->Fecha_hora)->format('d/m/Y H:i'),
+                'fecha' => Carbon::parse($cita->Fecha_hora)->format('d/m/Y'),
+                'hora' => Carbon::parse($cita->Fecha_hora)->format('H:i'),
                 'solicitadaEn' => $cita->confirmacion_solicitada_at,
             ];
         });
@@ -190,11 +192,14 @@ class ProcesarConfirmacionesCitas extends Command
         $enlace = rtrim(config('app.frontend_url'), '/').'/confirmar-cita?token='.$aviso['tokenConfirmacion'];
 
         try {
-            Mail::raw(
-                "Hola {$aviso['nombre']},\n\nTu cita de Book&Cut está programada para {$aviso['fecha']}. "
-                ."Confirma tu asistencia dentro de los próximos 30 minutos con este enlace: {$enlace}\n\n"
-                .'Si no confirmas, la cita se cancelará automáticamente. A esta hora ya no puedes reagendar, '
-                .'pero puedes confirmar o cancelar desde Mis citas.',
+            Mail::send(
+                'correos.confirmacion-asistencia',
+                [
+                    'nombreCliente' => $aviso['nombre'],
+                    'fecha' => $aviso['fecha'],
+                    'hora' => $aviso['hora'],
+                    'enlaceConfirmacion' => $enlace,
+                ],
                 fn ($mensaje) => $mensaje->to($aviso['correo'])->subject('Confirma tu asistencia a Book&Cut'),
             );
 
@@ -243,7 +248,6 @@ class ProcesarConfirmacionesCitas extends Command
             ->where('notificacion.intentos', '<', 3)
             ->select(
                 'notificacion.idNotificacion',
-                'notificacion.mensaje',
                 'notificacion.intentos',
                 'notificacion.fecha_hora_cita',
                 'usuario.correo',
@@ -258,9 +262,9 @@ class ProcesarConfirmacionesCitas extends Command
         $this->enviarAvisoCancelacion([
             'idNotificacion' => $aviso->idNotificacion,
             'correo' => $aviso->correo,
-            'nombre' => $aviso->Nombre,
-            'fecha' => Carbon::parse($aviso->fecha_hora_cita)->format('d/m/Y H:i'),
-            'mensaje' => $aviso->mensaje,
+            'nombre' => $aviso->Nombre ?? 'cliente',
+            'fecha' => Carbon::parse($aviso->fecha_hora_cita)->format('d/m/Y'),
+            'hora' => Carbon::parse($aviso->fecha_hora_cita)->format('H:i'),
         ]);
     }
 
@@ -287,9 +291,14 @@ class ProcesarConfirmacionesCitas extends Command
         ]);
 
         try {
-            Mail::raw(
-                "Hola {$aviso['nombre']},\n\n{$aviso['mensaje']} "
-                .($aviso['fecha'] ? "La hora programada era {$aviso['fecha']}." : ''),
+            Mail::send(
+                'correos.cita-cancelada',
+                [
+                    'nombreCliente' => $aviso['nombre'],
+                    'fecha' => $aviso['fecha'],
+                    'hora' => $aviso['hora'],
+                    'enlaceReservas' => rtrim(config('app.frontend_url'), '/').'/',
+                ],
                 fn ($mensaje) => $mensaje->to($aviso['correo'])->subject('Tu cita de Book&Cut fue cancelada'),
             );
 
