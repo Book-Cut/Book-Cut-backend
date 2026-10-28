@@ -124,7 +124,7 @@ class CitaSeeder extends Seeder
                     ->select('idCita')
                     ->whereIn('idServicio', $idsServicios)
                     ->groupBy('idCita')
-                    ->havingRaw('COUNT(DISTINCT idServicio) = ?', [count($idsServicios)])
+                    ->havingRaw('COUNT(DISTINCT cita_servicio.idServicio) = ?', [count($idsServicios)])
                     ->pluck('idCita');
 
                 $citaExistente = DB::table('cita')
