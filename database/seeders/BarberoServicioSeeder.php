@@ -12,7 +12,7 @@ class BarberoServicioSeeder extends Seeder
      */
     public function run(): void
     {
-        $barberos = DB::table('usuario')
+        $barberos = DB::table('Usuario')
             ->whereIn('correo', ['carlos@bookcut.com', 'andres@bookcut.com'])
             ->pluck('idUsuario', 'correo');
         $servicios = DB::table('servicio')->pluck('idServicio', 'Nombre');
