@@ -14,13 +14,20 @@ return new class extends Migration {
             $tabla->integer('precio_servicio')->nullable();
         });
 
-        DB::table('cita_servicio')
+        /*DB::table('cita_servicio')
             ->join('servicio', 'servicio.idServicio', '=', 'cita_servicio.idServicio')
             ->update([
-                'cita_servicio.nombre_servicio' => 'servicio.Nombre',
-                'cita_servicio.duracion_servicio' => 'servicio.Duracion',
-                'cita_servicio.precio_servicio' => 'servicio.Precio',
-            ]);
+                'cita_servicio.nombre_servicio' => DB::raw('servicio.Nombre'),
+                'cita_servicio.duracion_servicio' => DB::raw('servicio.Duracion'),
+                'cita_servicio.precio_servicio' => DB::raw('servicio.Precio'),
+            ]);*/
+        DB::raw("UPDATE cita_servicio
+SET
+    nombre_servicio = servicio.Nombre,
+    duracion_servicio = servicio.Duracion,
+    precio_servicio = servicio.Precio
+FROM servicio
+WHERE servicio.idServicio = cita_servicio.idServicio;");
     }
 
     public function down(): void
