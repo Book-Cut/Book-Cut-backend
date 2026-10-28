@@ -5,8 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::table('cita_servicio', function (Blueprint $tabla) {
@@ -18,9 +17,9 @@ return new class extends Migration
         DB::table('cita_servicio')
             ->join('servicio', 'servicio.idServicio', '=', 'cita_servicio.idServicio')
             ->update([
-                'cita_servicio.nombre_servicio' => DB::raw('servicio.Nombre'),
-                'cita_servicio.duracion_servicio' => DB::raw('servicio.Duracion'),
-                'cita_servicio.precio_servicio' => DB::raw('servicio.Precio'),
+                'cita_servicio.nombre_servicio' => 'servicio.Nombre',
+                'cita_servicio.duracion_servicio' => 'servicio.Duracion',
+                'cita_servicio.precio_servicio' => 'servicio.Precio',
             ]);
     }
 
