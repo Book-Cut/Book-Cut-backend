@@ -20,7 +20,11 @@ class FacturaController extends Controller
     {
         $user = Auth::user();
 
-        if (! $user || ! $user->roles) {
+
+        return response()->json($user, 200);
+
+
+        if (!$user || !$user->roles) {
             return response()->json(['result' => 'error', 'message' => 'Rol no definido'], 403);
         }
 
@@ -47,7 +51,7 @@ class FacturaController extends Controller
     public function estadisticas(Request $request)
     {
         $user = Auth::user();
-        if (! $user || ! $user->roles || $user->roles->Nombre_rol !== 'Administrador') {
+        if (!$user || !$user->roles || $user->roles->Nombre_rol !== 'Administrador') {
             return response()->json(['message' => 'No tienes permiso para consultar las estadísticas.'], 403);
         }
 
@@ -61,8 +65,8 @@ class FacturaController extends Controller
             return response()->json(['message' => 'Elige un mes o un rango de fechas, no ambos.'], 422);
         }
         if (
-            (isset($datos['desde']) && ! isset($datos['hasta']))
-            || (! isset($datos['desde']) && isset($datos['hasta']))
+            (isset($datos['desde']) && !isset($datos['hasta']))
+            || (!isset($datos['desde']) && isset($datos['hasta']))
         ) {
             return response()->json(['message' => 'Para filtrar por rango debes indicar las fechas desde y hasta.'], 422);
         }
@@ -73,7 +77,7 @@ class FacturaController extends Controller
         $hasta = null;
 
         if (isset($datos['mes'])) {
-            $desde = CarbonImmutable::parse($datos['mes'].'-01')->startOfMonth();
+            $desde = CarbonImmutable::parse($datos['mes'] . '-01')->startOfMonth();
             $hasta = $desde->endOfMonth();
         } elseif (isset($datos['desde'], $datos['hasta'])) {
             $desde = CarbonImmutable::parse($datos['desde'])->startOfDay();
@@ -139,7 +143,7 @@ class FacturaController extends Controller
 
         $cita = Citas::find($request->Cita_idCita);
 
-        if (! $cita) {
+        if (!$cita) {
             return response()->json(['result' => 'error', 'message' => 'Cita no encontrada'], 404);
         }
 
@@ -182,7 +186,7 @@ class FacturaController extends Controller
             'citas.servicios',
         ])->find($id);
 
-        if (! $factura) {
+        if (!$factura) {
             return response()->json(['result' => 'error', 'message' => 'Factura no encontrada'], 404);
         }
 
@@ -196,12 +200,12 @@ class FacturaController extends Controller
     {
         $user = Auth::user();
 
-        if (! $user || ! $user->roles || $user->roles->Nombre_rol !== 'Administrador') {
+        if (!$user || !$user->roles || $user->roles->Nombre_rol !== 'Administrador') {
             return response()->json(['result' => 'error', 'message' => 'No tienes permisos para actualizar facturas.'], 403);
         }
 
         $validator = Validator::make($request->all(), [
-            'numero_factura' => 'sometimes|required|unique:factura,numero_factura,'.$id.',idfactura',
+            'numero_factura' => 'sometimes|required|unique:factura,numero_factura,' . $id . ',idfactura',
             'fecha_emision' => 'sometimes|required|date',
             'Cita_idCita' => 'sometimes|required|exists:cita,idCita',
             'subtotal' => 'sometimes|required|numeric|min:0',
@@ -232,7 +236,7 @@ class FacturaController extends Controller
 
         $factura = Factura::find($id);
 
-        if (! $factura) {
+        if (!$factura) {
             return response()->json(['result' => 'error', 'message' => 'Factura no encontrada'], 404);
         }
 
@@ -259,13 +263,13 @@ class FacturaController extends Controller
     {
         $user = Auth::user();
 
-        if (! $user || ! $user->roles || $user->roles->Nombre_rol !== 'Administrador') {
+        if (!$user || !$user->roles || $user->roles->Nombre_rol !== 'Administrador') {
             return response()->json(['result' => 'error', 'message' => 'No tienes permisos para eliminar facturas.'], 403);
         }
 
         $factura = Factura::find($id);
 
-        if (! $factura) {
+        if (!$factura) {
             return response()->json(['result' => 'error', 'message' => 'Factura no encontrada'], 404);
         }
 
