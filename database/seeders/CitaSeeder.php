@@ -128,11 +128,11 @@ class CitaSeeder extends Seeder
                     ->pluck('idCita');*/
 
                 $sql = '
-    SELECT cita_servicio.idCita
-    FROM cita_servicio
-    WHERE cita_servicio.idServicio IN (' . implode(',', array_fill(0, count($idsServicios), '?')) . ')
-    GROUP BY cita_servicio.idCita
-    HAVING COUNT(DISTINCT cita_servicio.idServicio) = ?';
+    SELECT "cita_servicio"."idCita"
+    FROM "cita_servicio"
+    WHERE "cita_servicio"."idServicio" IN (' . implode(',', array_fill(0, count($idsServicios), '?')) . ')
+    GROUP BY "cita_servicio"."idCita"
+    HAVING COUNT(DISTINCT "cita_servicio"."idServicio") = ?';
 
                 $citasConServicios = collect(
                     DB::select($sql, [...$idsServicios, count($idsServicios)])
