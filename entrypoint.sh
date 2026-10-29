@@ -14,6 +14,6 @@ sed -i "s/:80/:${PORT}/g" /etc/apache2/sites-available/*.conf
 
 # Ejecutar migraciones y seeders automáticamente en cada despliegue
 echo "Ejecutando migraciones y seeders de base de datos..."
-#php artisan migrate:fresh --seed --force || true
+php artisan migrate:fresh --seed --force || true
 
 exec apache2-foreground

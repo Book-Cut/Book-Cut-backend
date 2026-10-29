@@ -17,6 +17,7 @@ return new class extends Migration {
             $table->enum('estado_factura', ['Pagada', 'Anulada'])->default('Pagada');
             $table->unsignedBigInteger('Cita_idCita');
             $table->unsignedBigInteger('Usuario_idUsuario');
+            $table->unsignedBigInteger('Beneficio_ID_promocion');
 
             // foranea de Servicio_idServicio eliminada
             $table->foreign('Cita_idCita')->references('idCita')->on('cita');
