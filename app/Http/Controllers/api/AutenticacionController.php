@@ -50,15 +50,15 @@ class AutenticacionController extends Controller
             'contrasenha' => 'required|string',
         ]);
 
-        //$user = usuario::where('correo', $request->correo)->first();
+        $user = usuario::where('correo', $request->correo)->first();
 
-        $users = usuario::all();
+        //$users = usuario::all();
 
-        return response()->json([
+        /*return response()->json([
             'result' => 'ok',
             'message' => 'Usuario autenticado exitosamente',
             'user' => $users
-        ], 200);
+        ], 200);*/
 
         if (!$user) {
             return response()->json(['result' => 'error', 'message' => 'Credenciales inválidas'], 401);
