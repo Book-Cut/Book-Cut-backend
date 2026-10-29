@@ -20,10 +20,6 @@ class FacturaController extends Controller
     {
         $user = Auth::user();
 
-
-        return response()->json($user, 200);
-
-
         if (!$user || !$user->roles) {
             return response()->json(['result' => 'error', 'message' => 'Rol no definido'], 403);
         }
@@ -36,6 +32,8 @@ class FacturaController extends Controller
             'citas.barbero:idUsuario,Nombre',
             'citas.servicios:idServicio,Nombre,Precio,Duracion',
         ]);
+
+        return response()->json($user, 200);
 
         if ($user->roles->Nombre_rol === 'Administrador') {
             return response()->json($query->get(), 200);
