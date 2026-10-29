@@ -69,7 +69,7 @@ class Factura extends Model
 
     public function beneficio()
     {
-        return $this->belongsTo(beneficios::class, 'Beneficio_ID_promocion', 'ID_promocion');
+        return $this->belongsTo(beneficios::class, 'Beneficio_ID_promocion', 'ID_publicacion');
     }
 
     public function usuario()
