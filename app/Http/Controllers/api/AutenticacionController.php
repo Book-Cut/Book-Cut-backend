@@ -53,7 +53,8 @@ class AutenticacionController extends Controller
         return response()->json([
             'result' => 'ok',
             'message' => 'Usuario autenticado exitosamente',
-            'user' => $request
+            'user' => $request->correo,
+            'clave' => $request->contrasenha,
         ], 200);
 
 
