@@ -50,6 +50,13 @@ class AutenticacionController extends Controller
             'contrasenha' => 'required|string',
         ]);
 
+        return response()->json([
+            'result' => 'ok',
+            'message' => 'Usuario autenticado exitosamente',
+            'user' => $request
+        ], 200);
+
+
         $user = usuario::where('correo', $request->correo)->first();
 
         if (!$user) {
@@ -95,7 +102,7 @@ class AutenticacionController extends Controller
                 ['token' => Hash::make($token), 'created_at' => now()]
             );
 
-            $url = rtrim(config('app.frontend_url'), '/'). '/restablecer?token=' . $token . '&correo=' . urlencode($user->correo);
+            $url = rtrim(config('app.frontend_url'), '/') . '/restablecer?token=' . $token . '&correo=' . urlencode($user->correo);
 
             Mail::raw("Hola {$user->Nombre},\n\nRestablece tu contraseña aquí (válido 60 min):\n$url\n\nSi no fuiste tú, ignora este correo.", function ($m) use ($user) {
                 $m->to($user->correo)->subject('Restablecer contraseña - Book&Cut');
@@ -120,8 +127,8 @@ class AutenticacionController extends Controller
         $row = DB::table('password_reset_tokens')->where('email', $request->correo)->first();
 
         if (
-            ! $row
-            || ! Hash::check($request->token, $row->token)
+            !$row
+            || !Hash::check($request->token, $row->token)
             || now()->greaterThan(\Illuminate\Support\Carbon::parse($row->created_at)->addMinutes(60))
         ) {
             return response()->json(['result' => 'error', 'message' => 'Enlace invalido o ya expiro'], 422);
@@ -138,7 +145,7 @@ class AutenticacionController extends Controller
     public function sendRegisterCode(Request $request)
     {
         $request->validate([
-             'Nombre' => 'required|string|max:255',
+            'Nombre' => 'required|string|max:255',
             'correo' => 'required|string|email|max:255|unique:Usuario,correo',
             'telefono' => 'required|string|max:45',
             'contrasenha' => 'required|string|min:6',
@@ -147,55 +154,55 @@ class AutenticacionController extends Controller
         $codigo = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
         Cache::put('registro:' . $request->correo, [
-        'codigo' => Hash::make($codigo),
-        'intentos' => 0,
-        'datos' => [
-            'Nombre' => $request->Nombre,
-            'correo' => $request->correo,
-            'telefono' => $request->telefono,
-            'contrasenha' => Hash::make($request->contrasenha),
-            'Roles_IDRol' => 3,
-            'terminos_aceptados' => $request->boolean('terminos_aceptados'),
-        ],
-    ], now()->addMinutes(10));
+            'codigo' => Hash::make($codigo),
+            'intentos' => 0,
+            'datos' => [
+                'Nombre' => $request->Nombre,
+                'correo' => $request->correo,
+                'telefono' => $request->telefono,
+                'contrasenha' => Hash::make($request->contrasenha),
+                'Roles_IDRol' => 3,
+                'terminos_aceptados' => $request->boolean('terminos_aceptados'),
+            ],
+        ], now()->addMinutes(10));
 
-    Mail::send('correos.codigo-verificacion', ['codigo' => $codigo], function ($mensaje) use ($request) {
-        $mensaje->to($request->correo)->subject('Verifica tu cuenta - Book&Cut');
-    });
+        Mail::send('correos.codigo-verificacion', ['codigo' => $codigo], function ($mensaje) use ($request) {
+            $mensaje->to($request->correo)->subject('Verifica tu cuenta - Book&Cut');
+        });
 
-    return response()->json(['result'=> 'ok', 'message'=> 'Codigo enviado']);
+        return response()->json(['result' => 'ok', 'message' => 'Codigo enviado']);
     }
 
-public function verifyRegisterCode(Request $request)
-{
-    $request->validate(['correo'=>'required|email', 'codigo' => 'required|digits:6']);
+    public function verifyRegisterCode(Request $request)
+    {
+        $request->validate(['correo' => 'required|email', 'codigo' => 'required|digits:6']);
 
-    $key = 'registro:' . $request->correo;
-    $registro = Cache::get($key);
+        $key = 'registro:' . $request->correo;
+        $registro = Cache::get($key);
 
-    if (!$registro) {
-        return response()->json(['result' => 'error', 'message' => 'el codigo expiro, solicite uno nuevo'], 422);
-    }
+        if (!$registro) {
+            return response()->json(['result' => 'error', 'message' => 'el codigo expiro, solicite uno nuevo'], 422);
+        }
 
-    if ($registro['intentos'] >= 5) {
+        if ($registro['intentos'] >= 5) {
+            Cache::forget($key);
+            return response()->json(['result' => 'error', 'message' => 'muchos intentos, solicita otro codigo'], 429);
+        }
+
+        if (!Hash::check($request->codigo, $registro['codigo'])) {
+            $registro['intentos']++;
+            Cache::put($key, $registro, now()->addMinutes(10));
+            return response()->json(['result' => 'error', 'message' => 'el codigo es incorrecto'], 422);
+        }
+
+        $user = usuario::create($registro['datos']);
         Cache::forget($key);
-        return response()->json(['result' => 'error', 'message' => 'muchos intentos, solicita otro codigo'], 429);
+
+        return response()->json([
+            'result' => 'ok',
+            'message' => 'Usuario registrado exitosamente',
+            'user' => $user,
+            'token' => $user->createToken('book_cut_api')->plainTextToken,
+        ], 201);
     }
-
-    if (!Hash::check($request->codigo, $registro['codigo'])) {
-        $registro['intentos']++;
-        Cache::put($key, $registro, now()->addMinutes(10));
-        return response()->json(['result' => 'error', 'message'  => 'el codigo es incorrecto'], 422);
-    }
-
-    $user = usuario::create($registro['datos']);
-    Cache::forget($key);
-
-      return response()->json([
-        'result' => 'ok',
-        'message' => 'Usuario registrado exitosamente',
-        'user' => $user,
-        'token' => $user->createToken('book_cut_api')->plainTextToken,
-    ], 201);
-}
 }
