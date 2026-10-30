@@ -11,6 +11,7 @@ class Factura extends Model
     public $table = 'factura';
 
     public $timestamps = false;
+    
 
     public $fillable = [
         'numero_factura',
