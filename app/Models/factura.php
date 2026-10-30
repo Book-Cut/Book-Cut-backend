@@ -11,7 +11,7 @@ class Factura extends Model
     public $table = 'factura';
 
     public $timestamps = false;
-    
+
 
     public $fillable = [
         'numero_factura',
@@ -75,6 +75,7 @@ class Factura extends Model
 
     public function usuario()
     {
+        //hola
         return $this->hasOneThrough(
             usuario::class,
             Citas::class,
