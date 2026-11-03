@@ -21,7 +21,7 @@ Route::post('/register/send-code', [AutenticacionController::class, 'sendRegiste
 Route::post('/register/verify', [AutenticacionController::class, 'verifyRegisterCode']);
 Route::post('/forgot-password', [AutenticacionController::class, 'forgotPassword']);
 Route::post('/reset-password', [AutenticacionController::class, 'resetPassword']);
-Route::post('/citas/confirmar-email', [NotificacionController::class, 'confirmarPorCorreo'])->middleware('throttle:10,1');
+Route::post('/Citas/confirmar-email', [NotificacionController::class, 'confirmarPorCorreo'])->middleware('throttle:10,1');
 
 Route::post('/usuarios', [usuarioController::class, 'store']);
 Route::get('/servicios', [ServicioController::class, 'index']);
@@ -32,9 +32,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/disponibilidad', [GestionCitasController::class, 'disponibilidad']);
     Route::get('/notificaciones', [NotificacionController::class, 'index']);
-    Route::patch('/citas/{id}/reagendar', [GestionCitasController::class, 'reagendar']);
-    Route::patch('/citas/{id}/confirmar-asistencia', [GestionCitasController::class, 'confirmarAsistencia']);
-    Route::patch('/citas/{id}/finalizar', [GestionCitasController::class, 'finalizar'])->name('citas.finalizar');
+    Route::patch('/Citas/{id}/reagendar', [GestionCitasController::class, 'reagendar']);
+    Route::patch('/Citas/{id}/confirmar-asistencia', [GestionCitasController::class, 'confirmarAsistencia']);
+    Route::patch('/Citas/{id}/finalizar', [GestionCitasController::class, 'finalizar'])->name('Citas.finalizar');
     Route::get('/perfil', [PerfilController::class, 'show']);
     Route::patch('/perfil', [PerfilController::class, 'update']);
 
@@ -42,15 +42,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/logout', [AutenticacionController::class, 'logout']);
     Route::get('/admin/estadisticas', [FacturaController::class, 'estadisticas']);
-    Route::apiResource('citas', CitasController::class)->only(['index', 'show']);
-    Route::post('/citas', [GestionCitasController::class, 'store'])->name('citas.store');
-    Route::post('/citas/{id}/pago', [GestionCitasController::class, 'registrarPago'])->name('citas.pago');
-    Route::match(['put', 'patch'], '/citas/{cita}', [GestionCitasController::class, 'update'])->name('citas.update');
-    Route::delete('/citas/{cita}', [GestionCitasController::class, 'destroy'])->name('citas.destroy');
+    Route::apiResource('Citas', CitasController::class)->only(['index', 'show']);
+    Route::post('/Citas', [GestionCitasController::class, 'store'])->name('Citas.store');
+    Route::post('/Citas/{id}/pago', [GestionCitasController::class, 'registrarPago'])->name('Citas.pago');
+    Route::match(['put', 'patch'], '/Citas/{cita}', [GestionCitasController::class, 'update'])->name('Citas.update');
+    Route::delete('/Citas/{cita}', [GestionCitasController::class, 'destroy'])->name('Citas.destroy');
     Route::apiResource('servicios', ServicioController::class)->except(['index']);
     Route::apiResource('facturas', FacturaController::class);
 
-    Route::post('/citas/{id}/valoracion', [ValoraController::class, 'guardarValoracionCita']);
+    Route::post('/Citas/{id}/valoracion', [ValoraController::class, 'guardarValoracionCita']);
     Route::get('/valoraciones', [ValoraController::class, 'listarValoraciones']);
     Route::apiResource('valora', ValoraController::class);
     Route::apiResource('beneficios', BeneficiosController::class);

@@ -59,12 +59,12 @@ class Citas extends Model
 
     public function factura()
     {
-        return $this->hasOne(factura::class, 'Cita_idCita', 'idCita');
+        return $this->hasOne(Factura::class, 'Cita_idCita', 'idCita');
     }
 
     public function facturas()
     {
-        return $this->belongsToMany(factura::class, 'cita_factura', 'idCita', 'idfactura', 'idCita', 'idfactura');
+        return $this->belongsToMany(Factura::class, 'cita_factura', 'idCita', 'idfactura', 'idCita', 'idfactura');
     }
 
     public function getBarbero()
