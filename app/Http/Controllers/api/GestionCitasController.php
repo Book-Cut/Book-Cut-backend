@@ -324,7 +324,7 @@ class GestionCitasController extends Controller
 
         $validator = Validator::make($request->all(), [
             'Fecha_hora' => 'required|date',
-            'Usuario_idUsuarioBar' => 'required|exists:usuario,idUsuario',
+            'Usuario_idUsuarioBar' => 'nullable|exists:usuario,idUsuario',
             'Usuario_idUsuarioCli' => 'nullable|exists:usuario,idUsuario',
             'nombre_cliente' => 'required|string|max:255',
             'telefono_cliente' => 'required|string|max:45',
@@ -337,7 +337,6 @@ class GestionCitasController extends Controller
         ], [
             'Fecha_hora.required' => 'El campo Fecha_hora es obligatorio.',
             'Fecha_hora.date' => 'El campo Fecha_hora debe ser una fecha válida.',
-            'Usuario_idUsuarioBar.required' => 'El campo Usuario_idUsuarioBar es obligatorio.',
             'Usuario_idUsuarioBar.exists' => 'El barbero seleccionado no existe.',
             'Usuario_idUsuarioCli.exists' => 'El cliente seleccionado no existe.',
             'nombre_cliente.required' => 'El nombre del cliente es obligatorio.',
@@ -373,67 +372,111 @@ class GestionCitasController extends Controller
         try {
             DB::beginTransaction();
 
-            $barbero = usuario::with('horariosLaborales')
-                ->where('Roles_IDRol', 2)
-                ->lockForUpdate()
-                ->find($request->input('Usuario_idUsuarioBar'));
-
             $serviciosInput = $request->input('servicios');
+            $idsServicios = collect($serviciosInput)
+                ->pluck('idServicio')
+                ->unique()
+                ->values();
+            $idBarberoSeleccionado = $request->input('Usuario_idUsuarioBar');
+            $consultaBarberos = usuario::with('horariosLaborales')
+                ->where('Roles_IDRol', 2);
+
+            if ($idBarberoSeleccionado) {
+                $consultaBarberos->where('idUsuario', $idBarberoSeleccionado);
+            } else {
+                $consultaBarberos->whereHas(
+                    'especialidad',
+                    fn ($consulta) => $consulta->whereIn('servicio.idServicio', $idsServicios),
+                    '=',
+                    $idsServicios->count(),
+                );
+            }
+
+            $barberos = $consultaBarberos->lockForUpdate()->get();
             $serviciosSeleccionados = Servicio::whereIn(
                 'idServicio',
-                collect($serviciosInput)->pluck('idServicio')->unique()
+                $idsServicios
             )->get()->keyBy('idServicio');
-            if (! $barbero) {
+            if ($barberos->isEmpty()) {
                 DB::rollBack();
 
-                return response()->json(['message' => 'El barbero seleccionado no existe.'], 422);
+                return response()->json([
+                    'message' => $idBarberoSeleccionado
+                        ? 'El barbero seleccionado no existe.'
+                        : 'No hay un barbero que ofrezca todos los servicios seleccionados.',
+                ], 422);
             }
 
             $esContinuo = $request->boolean('es_continuo');
-            $horaSiguiente = new DateTimeImmutable($request->input('Fecha_hora'));
-            $intervalosPorFecha = [];
-            $serviciosAgendados = [];
-
             if (! $esContinuo) {
                 usort($serviciosInput, fn ($a, $b) => strcmp(
                     $a['fecha_hora_servicio'],
                     $b['fecha_hora_servicio']
                 ));
             }
-            foreach ($serviciosInput as $servicioInput) {
-                $servicioSeleccionado = $serviciosSeleccionados->get($servicioInput['idServicio']);
-                $inicioServicio = $esContinuo
-                    ? $horaSiguiente
-                    : new DateTimeImmutable($servicioInput['fecha_hora_servicio']);
-                $finServicio = $inicioServicio->modify('+'.max(1, $this->duracionServicio($servicioSeleccionado)).' minutes');
-                $fechaServicio = $inicioServicio->format('Y-m-d');
 
-                if (! $this->estaDentroDelHorario($barbero, $inicioServicio, $finServicio)) {
-                    DB::rollBack();
+            $barberoAsignado = null;
+            $serviciosAgendados = [];
+            $motivoNoDisponibilidad = '';
 
-                    return response()->json(['message' => 'Uno de los servicios está fuera del horario laboral del barbero.'], 422);
+            foreach ($barberos as $barbero) {
+                $horaSiguiente = new DateTimeImmutable($request->input('Fecha_hora'));
+                $intervalosPorFecha = [];
+                $serviciosDelBarbero = [];
+                $disponible = true;
+
+                foreach ($serviciosInput as $servicioInput) {
+                    $servicioSeleccionado = $serviciosSeleccionados->get($servicioInput['idServicio']);
+                    $inicioServicio = $esContinuo
+                        ? $horaSiguiente
+                        : new DateTimeImmutable($servicioInput['fecha_hora_servicio']);
+                    $finServicio = $inicioServicio->modify('+'.max(1, $this->duracionServicio($servicioSeleccionado)).' minutes');
+                    $fechaServicio = $inicioServicio->format('Y-m-d');
+
+                    if (! $this->estaDentroDelHorario($barbero, $inicioServicio, $finServicio)) {
+                        $motivoNoDisponibilidad = 'Uno de los servicios está fuera del horario laboral del barbero.';
+                        $disponible = false;
+                        break;
+                    }
+
+                    if (! array_key_exists($fechaServicio, $intervalosPorFecha)) {
+                        $intervalosPorFecha[$fechaServicio] = $this->obtenerIntervalosOcupados($barbero->idUsuario, $fechaServicio);
+                    }
+
+                    if (! $this->intervaloDisponible($inicioServicio, $finServicio, $intervalosPorFecha[$fechaServicio])) {
+                        $motivoNoDisponibilidad = 'Uno de los horarios ya no está disponible. Elige otro horario.';
+                        $disponible = false;
+                        break;
+                    }
+
+                    $intervalosPorFecha[$fechaServicio][] = [$inicioServicio, $finServicio];
+                    $serviciosDelBarbero[] = [
+                        'idServicio' => $servicioInput['idServicio'],
+                        'fecha_hora_servicio' => $inicioServicio->format('Y-m-d H:i:s'),
+                        'inicio' => $inicioServicio,
+                        'fin' => $finServicio,
+                    ] + $this->datosHistoricosServicio($servicioSeleccionado);
+
+                    if ($esContinuo) {
+                        $horaSiguiente = $finServicio;
+                    }
                 }
 
-                if (! array_key_exists($fechaServicio, $intervalosPorFecha)) {
-                    $intervalosPorFecha[$fechaServicio] = $this->obtenerIntervalosOcupados($barbero->idUsuario, $fechaServicio);
+                if ($disponible) {
+                    $barberoAsignado = $barbero;
+                    $serviciosAgendados = $serviciosDelBarbero;
+                    break;
                 }
+            }
 
-                if (! $this->intervaloDisponible($inicioServicio, $finServicio, $intervalosPorFecha[$fechaServicio])) {
-                    DB::rollBack();
+            if (! $barberoAsignado) {
+                DB::rollBack();
 
-                    return response()->json(['message' => 'Uno de los horarios ya no está disponible. Elige otro horario.'], 422);
-                }
-
-                $intervalosPorFecha[$fechaServicio][] = [$inicioServicio, $finServicio];
-                $serviciosAgendados[] = [
-                    'idServicio' => $servicioInput['idServicio'],
-                    'fecha_hora_servicio' => $inicioServicio->format('Y-m-d H:i:s'),
-                    'inicio' => $inicioServicio,
-                    'fin' => $finServicio,
-                ] + $this->datosHistoricosServicio($servicioSeleccionado);
-                if ($esContinuo) {
-                    $horaSiguiente = $finServicio;
-                }
+                return response()->json([
+                    'message' => $idBarberoSeleccionado
+                        ? $motivoNoDisponibilidad
+                        : 'No hay un barbero disponible para ese horario. Elige otra hora.',
+                ], 422);
             }
 
             $inicioCita = collect($serviciosAgendados)
@@ -448,7 +491,7 @@ class GestionCitasController extends Controller
                     'metodo_pago' => null,
                     'Valora_Idvalora' => null,
                     'Usuario_idUsuarioCli' => $idCliente,
-                    'Usuario_idUsuarioBar' => $request->input('Usuario_idUsuarioBar'),
+                    'Usuario_idUsuarioBar' => $barberoAsignado->idUsuario,
                     'nombre_cliente' => $request->input('nombre_cliente'),
                     'telefono_cliente' => $request->input('telefono_cliente'),
                 ]);
