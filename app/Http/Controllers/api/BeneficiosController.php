@@ -45,9 +45,26 @@ class BeneficiosController extends Controller
 
         $data = $request->except('imagen');
         if ($request->hasFile('imagen')) {
-            $data['imagen'] = $request->file('imagen')->store('beneficios', 'public');
+            $imagen = $request->file('imagen')->store('beneficios', 'public');
+            if (! $imagen) {
+                Log::error('No se pudo guardar la imagen del beneficio.', [
+                    'beneficio_id' => null,
+                    'usuario_id' => $user->idUsuario,
+                ]);
+
+                return response()->json([
+                    'message' => 'No se pudo guardar la imagen del beneficio. Inténtalo de nuevo.',
+                ], 500);
+            }
+            $data['imagen'] = $imagen;
         }
         $beneficios = beneficios::create($data);
+
+        return response()->json([
+            'result' => 'ok',
+            'message' => 'Beneficio creado correctamente.',
+            'beneficios' => $beneficios,
+        ], 201);
     }
 
     /**
@@ -88,9 +105,22 @@ class BeneficiosController extends Controller
         if ($beneficios) {
             $data = $request->except('imagen');
             if ($request->hasFile('imagen')) {
-                $data['imagen'] = $request->file('imagen')->store('beneficios', 'public');
+                $imagen = $request->file('imagen')->store('beneficios', 'public');
+                if (! $imagen) {
+                    Log::error('No se pudo guardar la imagen del beneficio.', [
+                        'beneficio_id' => $beneficios->ID_publicacion,
+                        'usuario_id' => $user->idUsuario,
+                    ]);
+
+                    return response()->json([
+                        'message' => 'No se pudo guardar la imagen del beneficio. Inténtalo de nuevo.',
+                    ], 500);
+                }
+                $data['imagen'] = $imagen;
             }
-            $beneficios -> update($data);
+
+            $beneficios->update($data);
+
             return response()->json(['result' => 'ok', 'message' => 'Beneficio actualizado correctamente', 'beneficios' => $beneficios]);
         } else {
             return response()->json(['result' => 'error', 'message' => 'Beneficio no encontrado'], 404);

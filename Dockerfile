@@ -42,10 +42,10 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# 9.1 Permitir que Apache guarde fotos de perfil en el disco público configurado
-RUN mkdir -p /var/www/html/public/storage/fotos-perfil \
-    && chown -R www-data:www-data /var/www/html/public/storage/fotos-perfil \
-    && chmod -R 775 /var/www/html/public/storage/fotos-perfil
+# 9.1 Permitir que Apache guarde fotos de perfil e imágenes de beneficios
+RUN mkdir -p /var/www/html/public/storage/fotos-perfil /var/www/html/public/storage/beneficios \
+    && chown -R www-data:www-data /var/www/html/public/storage/fotos-perfil /var/www/html/public/storage/beneficios \
+    && chmod -R 775 /var/www/html/public/storage/fotos-perfil /var/www/html/public/storage/beneficios
 
 # 10. Copiar y preparar script de inicio para enlazar explícitamente a 0.0.0.0:$PORT
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
