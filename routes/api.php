@@ -14,11 +14,11 @@ use App\Http\Controllers\api\ValoraController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AutenticacionController::class, 'login']);
-Route::post('/register', [AutenticacionController::class, 'register']);
+Route::post('/registro', [AutenticacionController::class, 'registro']);
 
 
-Route::post('/register/send-code', [AutenticacionController::class, 'sendRegisterCode']);
-Route::post('/register/verify', [AutenticacionController::class, 'verifyRegisterCode']);
+Route::post('/registro/send-code', [AutenticacionController::class, 'sendRegisterCode']);
+Route::post('/registro/verify', [AutenticacionController::class, 'verifyRegisterCode']);
 Route::post('/forgot-password', [AutenticacionController::class, 'forgotPassword']);
 Route::post('/reset-password', [AutenticacionController::class, 'resetPassword']);
 Route::post('/citas/confirmar-email', [NotificacionController::class, 'confirmarPorCorreo'])->middleware('throttle:10,1');
