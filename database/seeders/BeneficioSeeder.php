@@ -12,7 +12,7 @@ class BeneficioSeeder extends Seeder
      */
     public function run(): void
     {
-        $administrador = DB::table('usuario')->where('correo', 'admin@bookcut.com')->value('idUsuario');
+        $administrador = DB::table('Usuario')->where('correo', 'admin@bookcut.com')->value('idUsuario');
 
         foreach ([
             [

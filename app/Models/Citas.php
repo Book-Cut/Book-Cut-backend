@@ -54,7 +54,7 @@ class Citas extends Model
 
     public function barbero()
     {
-        return $this->belongsTo(Usuario::class, 'Usuario_idUsuarioBar', 'idUsuario');
+        return $this->belongsTo(usuario::class, 'Usuario_idUsuarioBar', 'idUsuario');
     }
 
     public function factura()

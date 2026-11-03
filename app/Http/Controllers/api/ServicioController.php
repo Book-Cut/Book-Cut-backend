@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Validator;
 class ServicioController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display a listing of the resource. no
      */
     public function index()
     {

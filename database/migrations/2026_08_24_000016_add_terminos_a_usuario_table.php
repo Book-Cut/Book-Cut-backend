@@ -4,14 +4,13 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
     public function up(): void
-        {
-        Schema::table('usuario', function (Blueprint $table) {
+    {
+        Schema::table('Usuario', function (Blueprint $table) {
             $table->boolean('terminos_aceptados')->default(false);
         });
     }
@@ -21,7 +20,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('usuario', function (Blueprint $table) {
+        Schema::table('Usuario', function (Blueprint $table) {
             $table->dropColumn('terminos_aceptados');
         });
     }

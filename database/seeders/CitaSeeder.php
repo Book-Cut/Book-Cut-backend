@@ -10,12 +10,12 @@ class CitaSeeder extends Seeder
 {
     public function run(): void
     {
-        $usuarios = DB::table('usuario')->pluck('idUsuario', 'correo');
+        $usuarios = DB::table('Usuario')->pluck('idUsuario', 'correo');
         $servicios = DB::table('servicio')->get()->keyBy('Nombre');
         $proximaFecha = static function (array $diasPermitidos, int $diasDesdeHoy): CarbonImmutable {
             $fecha = CarbonImmutable::now()->addDays($diasDesdeHoy)->startOfDay();
 
-            while (! in_array($fecha->dayOfWeekIso, $diasPermitidos, true)) {
+            while (!in_array($fecha->dayOfWeekIso, $diasPermitidos, true)) {
                 $fecha = $fecha->addDay();
             }
 
@@ -104,9 +104,9 @@ class CitaSeeder extends Seeder
                 ->where('numero_factura', $numeroFactura)
                 ->first();
 
-            if (! $facturaExistente) {
+            if (!$facturaExistente) {
                 $facturaExistente = DB::table('factura')
-                    ->where('numero_factura', 'SEED-BOOKCUT-'.$datosCita['codigo'])
+                    ->where('numero_factura', 'SEED-BOOKCUT-' . $datosCita['codigo'])
                     ->first();
             }
 
@@ -116,16 +116,27 @@ class CitaSeeder extends Seeder
                 ->where('Usuario_idUsuarioBar', $idBarbero)
                 ->first();
 
-            if (! $citaExistente && ! $facturaExistente) {
+            if (!$citaExistente && !$facturaExistente) {
                 $idsServicios = collect($datosCita['servicios'])
-                    ->map(fn ($nombreServicio) => $servicios[$nombreServicio]->idServicio)
+                    ->map(fn($nombreServicio) => $servicios[$nombreServicio]->idServicio)
                     ->all();
-                $citasConServicios = DB::table('cita_servicio')
+                /*$citasConServicios = DB::table('cita_servicio')
                     ->select('idCita')
                     ->whereIn('idServicio', $idsServicios)
                     ->groupBy('idCita')
-                    ->havingRaw('COUNT(DISTINCT idServicio) = ?', [count($idsServicios)])
-                    ->pluck('idCita');
+                    ->havingRaw('COUNT(DISTINCT cita_servicio.idServicio) = ?', [count($idsServicios)])
+                    ->pluck('idCita');*/
+
+                $sql = '
+    SELECT "cita_servicio"."idCita"
+    FROM "cita_servicio"
+    WHERE "cita_servicio"."idServicio" IN (' . implode(',', array_fill(0, count($idsServicios), '?')) . ')
+    GROUP BY "cita_servicio"."idCita"
+    HAVING COUNT(DISTINCT "cita_servicio"."idServicio") = ?';
+
+                $citasConServicios = collect(
+                    DB::select($sql, [...$idsServicios, count($idsServicios)])
+                )->pluck('idCita');
 
                 $citaExistente = DB::table('cita')
                     ->where('Usuario_idUsuarioCli', $idCliente)
@@ -191,7 +202,7 @@ class CitaSeeder extends Seeder
             }
 
             $subtotal = collect($datosCita['servicios'])
-                ->sum(fn ($nombreServicio) => (int) $servicios[$nombreServicio]->Precio);
+                ->sum(fn($nombreServicio) => (int) $servicios[$nombreServicio]->Precio);
 
             if ($datosCita['estadoPago'] === 'Pagado') {
                 $datosFactura = [

@@ -81,7 +81,7 @@ class UsuarioSeeder extends Seeder
             $rol = $usuario['rol'];
             unset($usuario['rol']);
 
-            DB::table('usuario')->updateOrInsert(
+            DB::table('Usuario')->updateOrInsert(
                 ['correo' => $usuario['correo']],
                 [
                     ...$usuario,

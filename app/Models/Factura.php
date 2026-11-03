@@ -12,6 +12,7 @@ class Factura extends Model
 
     public $timestamps = false;
 
+
     public $fillable = [
         'numero_factura',
         'fecha_emision',
@@ -69,11 +70,12 @@ class Factura extends Model
 
     public function beneficio()
     {
-        return $this->belongsTo(beneficios::class, 'Beneficio_ID_promocion', 'ID_promocion');
+        return $this->belongsTo(beneficios::class, 'Beneficio_ID_promocion', 'ID_publicacion');
     }
 
     public function usuario()
     {
+        //hola
         return $this->hasOneThrough(
             usuario::class,
             Citas::class,

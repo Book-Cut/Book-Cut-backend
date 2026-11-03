@@ -14,7 +14,7 @@ return new class extends Migration {
             $table->unsignedBigInteger('Usuario_idUsuarioBar');
             $table->unsignedBigInteger('idServicio');
 
-            $table->foreign('Usuario_idUsuarioBar')->references('idUsuario')->on('usuario');
+            $table->foreign('Usuario_idUsuarioBar')->references('idUsuario')->on('Usuario');
             $table->foreign('idServicio')->references('idServicio')->on('servicio');
 
             $table->primary(['Usuario_idUsuarioBar', 'idServicio']);

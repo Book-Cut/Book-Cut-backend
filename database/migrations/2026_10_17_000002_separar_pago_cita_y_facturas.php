@@ -5,8 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         $citasDuplicadas = DB::table('factura')
@@ -38,15 +37,6 @@ return new class extends Migration
             $table->enum('modalidad_pago', ['En línea', 'Presencial'])->default('Presencial');
         });
 
-        Schema::table('factura', function (Blueprint $table) {
-            $table->enum('metodo_pago', ['Efectivo', 'Nequi', 'Tarjeta', 'Transferencia', 'Pendiente_Pago'])
-                ->nullable()
-                ->change();
-            $table->enum('estado_factura', ['Emitida', 'Pendiente de pago', 'Pagada', 'Anulada'])
-                ->default('Pendiente de pago')
-                ->change();
-        });
-
         DB::table('factura')
             ->whereNull('metodo_pago')
             ->orWhere('metodo_pago', 'Pendiente_Pago')
@@ -63,14 +53,6 @@ return new class extends Migration
                 ->update(['estado_pago' => 'Pagado']);
         }
 
-        Schema::table('factura', function (Blueprint $table) {
-            $table->enum('metodo_pago', ['Efectivo', 'Nequi', 'Tarjeta', 'Transferencia'])
-                ->change();
-            $table->enum('estado_factura', ['Pagada', 'Anulada'])
-                ->default('Pagada')
-                ->change();
-            $table->unique('Cita_idCita');
-        });
     }
 
     public function down(): void

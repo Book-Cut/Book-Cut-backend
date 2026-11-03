@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('factura', function (Blueprint $table) {
@@ -18,10 +17,12 @@ return new class extends Migration
             $table->enum('estado_factura', ['Pagada', 'Anulada'])->default('Pagada');
             $table->unsignedBigInteger('Cita_idCita');
             $table->unsignedBigInteger('Usuario_idUsuario');
+            $table->unsignedBigInteger('Beneficio_ID_promocion')->nullable();
 
             // foranea de Servicio_idServicio eliminada
             $table->foreign('Cita_idCita')->references('idCita')->on('cita');
             $table->foreign('Usuario_idUsuario')->references('idUsuario')->on('Usuario');
+            $table->unique('Cita_idCita');
         });
     }
 

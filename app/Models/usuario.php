@@ -10,7 +10,7 @@ class usuario extends Authenticatable
 {
     use HasApiTokens, Notifiable;
 
-    public $table = 'usuario';
+    public $table = 'Usuario';
 
     public $primaryKey = 'idUsuario';
 

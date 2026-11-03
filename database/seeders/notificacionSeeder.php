@@ -13,9 +13,9 @@ class notificacionSeeder extends Seeder
     public function run(): void
     {
         $citas = DB::table('cita')
-            ->join('usuario', 'usuario.idUsuario', '=', 'cita.Usuario_idUsuarioCli')
+            ->join('Usuario', 'Usuario.idUsuario', '=', 'cita.Usuario_idUsuarioCli')
             ->whereIn('estado', ['Confirmado', 'Pendiente'])
-            ->whereIn('usuario.correo', ['luis@gmail.com', 'miguel@gmail.com', 'sofia@gmail.com'])
+            ->whereIn('Usuario.correo', ['luis@gmail.com', 'miguel@gmail.com', 'sofia@gmail.com'])
             ->get(['cita.idCita', 'cita.estado']);
 
         foreach ($citas as $cita) {
