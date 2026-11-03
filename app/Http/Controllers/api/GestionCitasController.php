@@ -20,7 +20,7 @@ class GestionCitasController extends Controller
     public function disponibilidad(Request $request)
     {
         $datosValidados = $request->validate([
-            'barbero_id' => 'required|integer|exists:usuario,idUsuario',
+            'barbero_id' => 'required|integer|exists:Usuario,idUsuario',
             'fecha' => 'required|date_format:Y-m-d|after_or_equal:today',
             'duracion' => 'required|integer|min:1',
             'cita_id' => 'sometimes|integer|exists:cita,idCita',
@@ -30,7 +30,7 @@ class GestionCitasController extends Controller
             ->where('Roles_IDRol', 2)
             ->find($datosValidados['barbero_id']);
 
-        if (! $barbero) {
+        if (!$barbero) {
             return response()->json(['message' => 'El barbero seleccionado no existe.'], 404);
         }
 
@@ -40,8 +40,8 @@ class GestionCitasController extends Controller
             $usuario = $request->user();
 
             if (
-                ! $usuario
-                || ! $citaExcluir
+                !$usuario
+                || !$citaExcluir
                 || $usuario->roles?->Nombre_rol !== 'Cliente'
                 || (int) $citaExcluir->Usuario_idUsuarioCli !== (int) $usuario->idUsuario
                 || (int) $citaExcluir->Usuario_idUsuarioBar !== (int) $barbero->idUsuario
@@ -51,7 +51,7 @@ class GestionCitasController extends Controller
 
             if (
                 in_array($citaExcluir->estado, ['Cancelado', 'Finalizado'], true)
-                || ! $this->estaDentroDelPlazoMinimo($citaExcluir)
+                || !$this->estaDentroDelPlazoMinimo($citaExcluir)
                 || $this->inicioCita($citaExcluir) <= new DateTimeImmutable
             ) {
                 return response()->json(['message' => 'Esta cita ya no permite consultar horarios para reagendar.'], 422);
@@ -59,7 +59,7 @@ class GestionCitasController extends Controller
         }
 
         $fecha = new DateTimeImmutable($datosValidados['fecha']);
-        $horarios = $barbero->horariosLaborales->filter(fn ($horario) => $this->horarioCorrespondeAlDia($horario->diasemana, $fecha));
+        $horarios = $barbero->horariosLaborales->filter(fn($horario) => $this->horarioCorrespondeAlDia($horario->diasemana, $fecha));
         $intervalosOcupados = $this->obtenerIntervalosOcupados(
             $barbero->idUsuario,
             $datosValidados['fecha'],
@@ -79,26 +79,28 @@ class GestionCitasController extends Controller
         $ahora = new DateTimeImmutable;
 
         foreach ($horarios as $horario) {
-            $inicioJornada = new DateTimeImmutable($fecha->format('Y-m-d').' '.$horario->horainicio);
-            $finJornada = new DateTimeImmutable($fecha->format('Y-m-d').' '.$horario->horafin);
+            $inicioJornada = new DateTimeImmutable($fecha->format('Y-m-d') . ' ' . $horario->horainicio);
+            $finJornada = new DateTimeImmutable($fecha->format('Y-m-d') . ' ' . $horario->horafin);
 
             for ($inicio = $inicioJornada; $inicio->modify('+30 minutes') <= $finJornada; $inicio = $inicio->modify('+30 minutes')) {
                 if ($fecha->format('Y-m-d') === $ahora->format('Y-m-d') && $inicio < $ahora) {
                     continue;
                 }
 
-                $segmentos = $serviciosReagendados ?: [[
-                    'offset' => 0,
-                    'duracion' => (int) $datosValidados['duracion'],
-                ]];
+                $segmentos = $serviciosReagendados ?: [
+                    [
+                        'offset' => 0,
+                        'duracion' => (int) $datosValidados['duracion'],
+                    ]
+                ];
                 $intervalosTemporales = $intervalosOcupados;
                 $disponible = true;
                 foreach ($segmentos as $segmento) {
-                    $inicioServicio = $inicio->modify('+'.$segmento['offset'].' minutes');
-                    $finServicio = $inicioServicio->modify('+'.$segmento['duracion'].' minutes');
+                    $inicioServicio = $inicio->modify('+' . $segmento['offset'] . ' minutes');
+                    $finServicio = $inicioServicio->modify('+' . $segmento['duracion'] . ' minutes');
                     if (
-                        ! $this->estaDentroDelHorario($barbero, $inicioServicio, $finServicio)
-                        || ! $this->intervaloDisponible($inicioServicio, $finServicio, $intervalosTemporales)
+                        !$this->estaDentroDelHorario($barbero, $inicioServicio, $finServicio)
+                        || !$this->intervaloDisponible($inicioServicio, $finServicio, $intervalosTemporales)
                     ) {
                         $disponible = false;
                         break;
@@ -125,12 +127,12 @@ class GestionCitasController extends Controller
         $usuario = $request->user();
         $cita = Citas::find($id);
 
-        if (! $cita) {
+        if (!$cita) {
             return response()->json(['message' => 'Cita no encontrada.'], 404);
         }
 
         if (
-            ! $usuario
+            !$usuario
             || $usuario->roles?->Nombre_rol !== 'Cliente'
             || (int) $cita->Usuario_idUsuarioCli !== (int) $usuario->idUsuario
         ) {
@@ -140,7 +142,7 @@ class GestionCitasController extends Controller
         if (in_array($cita->estado, ['Cancelado', 'Finalizado'], true)) {
             return response()->json(['message' => 'Esta cita ya no se puede reagendar.'], 422);
         }
-        if (! $this->estaDentroDelPlazoMinimo($cita)) {
+        if (!$this->estaDentroDelPlazoMinimo($cita)) {
             return response()->json(['message' => 'Solo puedes reagendar hasta dos horas antes de que comience la cita.'], 422);
         }
 
@@ -153,19 +155,19 @@ class GestionCitasController extends Controller
             $cita = Citas::with('servicios')->lockForUpdate()->find($id);
 
             if (
-                ! $cita
+                !$cita
                 || (int) $cita->Usuario_idUsuarioCli !== (int) $usuario->idUsuario
                 || in_array($cita->estado, ['Cancelado', 'Finalizado'], true)
-                || ! $this->estaDentroDelPlazoMinimo($cita)
+                || !$this->estaDentroDelPlazoMinimo($cita)
             ) {
                 return response()->json(['message' => 'Esta cita ya no se puede reagendar. Debes hacerlo al menos dos horas antes.'], 422);
             }
 
-            if (! $barbero || $cita->servicios->isEmpty()) {
+            if (!$barbero || $cita->servicios->isEmpty()) {
                 return response()->json(['message' => 'No se pudo validar el barbero o los servicios de la cita.'], 422);
             }
 
-            $inicioCita = new DateTimeImmutable($datos['fecha'].' '.$datos['hora']);
+            $inicioCita = new DateTimeImmutable($datos['fecha'] . ' ' . $datos['hora']);
             if ($inicioCita <= new DateTimeImmutable) {
                 return response()->json(['message' => 'Selecciona una fecha y hora futuras.'], 422);
             }
@@ -182,20 +184,20 @@ class GestionCitasController extends Controller
             foreach ($this->serviciosProgramados($cita) as $programado) {
                 $servicio = $programado['servicio'];
                 $desplazamiento = (int) (($programado['inicio']->getTimestamp() - $inicioOriginal->getTimestamp()) / 60);
-                $inicioServicio = $inicioCita->modify('+'.$desplazamiento.' minutes');
-                $finServicio = $inicioServicio->modify('+'.max(1, $this->duracionServicio($servicio)).' minutes');
+                $inicioServicio = $inicioCita->modify('+' . $desplazamiento . ' minutes');
+                $finServicio = $inicioServicio->modify('+' . max(1, $this->duracionServicio($servicio)) . ' minutes');
 
-                if (! $this->estaDentroDelHorario($barbero, $inicioServicio, $finServicio)) {
+                if (!$this->estaDentroDelHorario($barbero, $inicioServicio, $finServicio)) {
                     return response()->json(['message' => 'La cita queda fuera del horario laboral del barbero.'], 422);
                 }
 
                 $fechaServicio = $inicioServicio->format('Y-m-d');
-                if (! isset($intervalosPorFecha[$fechaServicio])) {
+                if (!isset($intervalosPorFecha[$fechaServicio])) {
                     $intervalosPorFecha[$fechaServicio] = $fechaServicio === $fecha
                         ? $intervalosOcupados
                         : $this->obtenerIntervalosOcupados($barbero->idUsuario, $fechaServicio, $cita->idCita);
                 }
-                if (! $this->intervaloDisponible($inicioServicio, $finServicio, $intervalosPorFecha[$fechaServicio])) {
+                if (!$this->intervaloDisponible($inicioServicio, $finServicio, $intervalosPorFecha[$fechaServicio])) {
                     return response()->json(['message' => 'Ese horario ya está ocupado. Elige otro horario.'], 422);
                 }
 
@@ -238,19 +240,19 @@ class GestionCitasController extends Controller
         return DB::transaction(function () use ($usuario, $id) {
             $cita = Citas::with('factura')->lockForUpdate()->find($id);
 
-            if (! $cita) {
+            if (!$cita) {
                 return response()->json(['message' => 'Cita no encontrada.'], 404);
             }
 
             if (
-                ! $usuario
+                !$usuario
                 || $usuario->roles?->Nombre_rol !== 'Cliente'
                 || (int) $cita->Usuario_idUsuarioCli !== (int) $usuario->idUsuario
             ) {
                 return response()->json(['message' => 'No tienes permiso para confirmar esta cita.'], 403);
             }
 
-            if ($cita->estado !== 'Pendiente' || ! $cita->confirmacion_solicitada_at) {
+            if ($cita->estado !== 'Pendiente' || !$cita->confirmacion_solicitada_at) {
                 return response()->json(['message' => 'Esta cita no está esperando confirmación.'], 422);
             }
 
@@ -283,7 +285,7 @@ class GestionCitasController extends Controller
     public function finalizar(Request $request, int $id)
     {
         $usuario = $request->user();
-        if (! $usuario || ! $usuario->roles) {
+        if (!$usuario || !$usuario->roles) {
             return response()->json(['message' => 'Rol no definido.'], 403);
         }
 
@@ -292,7 +294,7 @@ class GestionCitasController extends Controller
                 ->lockForUpdate()
                 ->find($id);
 
-            if (! $cita) {
+            if (!$cita) {
                 return response()->json(['message' => 'Cita no encontrada.'], 404);
             }
 
@@ -300,7 +302,7 @@ class GestionCitasController extends Controller
             $esBarberoAsignado = $usuario->roles->Nombre_rol === 'Barbero'
                 && (int) $cita->Usuario_idUsuarioBar === (int) $usuario->idUsuario;
 
-            if (! $esAdministrador && ! $esBarberoAsignado) {
+            if (!$esAdministrador && !$esBarberoAsignado) {
                 return response()->json(['message' => 'No tienes permiso para finalizar esta cita.'], 403);
             }
 
@@ -324,8 +326,8 @@ class GestionCitasController extends Controller
 
         $validator = Validator::make($request->all(), [
             'Fecha_hora' => 'required|date',
-            'Usuario_idUsuarioBar' => 'nullable|exists:usuario,idUsuario',
-            'Usuario_idUsuarioCli' => 'nullable|exists:usuario,idUsuario',
+            'Usuario_idUsuarioBar' => 'nullable|exists:Usuario,idUsuario',
+            'Usuario_idUsuarioCli' => 'nullable|exists:Usuario,idUsuario',
             'nombre_cliente' => 'required|string|max:255',
             'telefono_cliente' => 'required|string|max:45',
             'es_continuo' => 'required|boolean',
@@ -392,7 +394,10 @@ class GestionCitasController extends Controller
                 );
             }
 
-            $barberos = $consultaBarberos->lockForUpdate()->get();
+            $barberos = $consultaBarberos
+                ->orderBy('idUsuario')
+                ->lockForUpdate()
+                ->get();
             $serviciosSeleccionados = Servicio::whereIn(
                 'idServicio',
                 $idsServicios
@@ -414,7 +419,6 @@ class GestionCitasController extends Controller
                     $b['fecha_hora_servicio']
                 ));
             }
-
             $barberoAsignado = null;
             $serviciosAgendados = [];
             $motivoNoDisponibilidad = '';
@@ -430,7 +434,9 @@ class GestionCitasController extends Controller
                     $inicioServicio = $esContinuo
                         ? $horaSiguiente
                         : new DateTimeImmutable($servicioInput['fecha_hora_servicio']);
-                    $finServicio = $inicioServicio->modify('+'.max(1, $this->duracionServicio($servicioSeleccionado)).' minutes');
+                    $finServicio = $inicioServicio->modify(
+                        '+'.max(1, $this->duracionServicio($servicioSeleccionado)).' minutes'
+                    );
                     $fechaServicio = $inicioServicio->format('Y-m-d');
 
                     if (! $this->estaDentroDelHorario($barbero, $inicioServicio, $finServicio)) {
@@ -483,18 +489,18 @@ class GestionCitasController extends Controller
                 ->sortBy(fn ($servicio) => $servicio['inicio']->getTimestamp())
                 ->first()['inicio'];
             $cita = Citas::create([
-                    'Fecha_hora' => $inicioCita->format('Y-m-d H:i:s'),
-                    'fecha_agendada' => now(),
-                    'estado' => 'Confirmado',
-                    'estado_pago' => 'Pendiente',
-                    'modalidad_pago' => 'Presencial',
-                    'metodo_pago' => null,
-                    'Valora_Idvalora' => null,
-                    'Usuario_idUsuarioCli' => $idCliente,
-                    'Usuario_idUsuarioBar' => $barberoAsignado->idUsuario,
-                    'nombre_cliente' => $request->input('nombre_cliente'),
-                    'telefono_cliente' => $request->input('telefono_cliente'),
-                ]);
+                'Fecha_hora' => $inicioCita->format('Y-m-d H:i:s'),
+                'fecha_agendada' => now(),
+                'estado' => 'Confirmado',
+                'estado_pago' => 'Pendiente',
+                'modalidad_pago' => 'Presencial',
+                'metodo_pago' => null,
+                'Valora_Idvalora' => null,
+                'Usuario_idUsuarioCli' => $idCliente,
+                'Usuario_idUsuarioBar' => $barberoAsignado->idUsuario,
+                'nombre_cliente' => $request->input('nombre_cliente'),
+                'telefono_cliente' => $request->input('telefono_cliente'),
+            ]);
 
             foreach ($serviciosAgendados as $servicioAgendado) {
                 $cita->servicios()->attach($servicioAgendado['idServicio'], [
@@ -527,7 +533,7 @@ class GestionCitasController extends Controller
             $usuario = $request->user();
             $cita = Citas::with('servicios')->lockForUpdate()->find($id);
 
-            if (! $cita) {
+            if (!$cita) {
                 return response()->json(['message' => 'Cita no encontrada.'], 404);
             }
 
@@ -535,7 +541,7 @@ class GestionCitasController extends Controller
             $esBarberoAsignado = $usuario?->roles?->Nombre_rol === 'Barbero'
                 && (int) $cita->Usuario_idUsuarioBar === (int) $usuario->idUsuario;
 
-            if (! $esAdministrador && ! $esBarberoAsignado) {
+            if (!$esAdministrador && !$esBarberoAsignado) {
                 return response()->json(['message' => 'No tienes permiso para registrar este pago.'], 403);
             }
 
@@ -548,15 +554,15 @@ class GestionCitasController extends Controller
             if ($cita->estado_pago !== 'Pendiente' || $cita->estado !== 'Finalizado') {
                 return response()->json(['message' => 'El pago de esta cita ya fue registrado.'], 409);
             }
-            if ($citasGrupo->contains(fn ($citaGrupo) => $citaGrupo->estado !== 'Finalizado')) {
+            if ($citasGrupo->contains(fn($citaGrupo) => $citaGrupo->estado !== 'Finalizado')) {
                 return response()->json(['message' => 'Finaliza todas las citas consecutivas antes de registrar el pago.'], 422);
             }
-            if ($citasGrupo->contains(fn ($citaGrupo) => $citaGrupo->factura()->exists() || $citaGrupo->facturas()->exists())) {
+            if ($citasGrupo->contains(fn($citaGrupo) => $citaGrupo->factura()->exists() || $citaGrupo->facturas()->exists())) {
                 return response()->json(['message' => 'Una de las citas ya tiene una factura asociada.'], 422);
             }
             if (
-                ! $esAdministrador
-                && $citasGrupo->contains(fn ($citaGrupo) => (int) $citaGrupo->Usuario_idUsuarioBar !== (int) $usuario->idUsuario)
+                !$esAdministrador
+                && $citasGrupo->contains(fn($citaGrupo) => (int) $citaGrupo->Usuario_idUsuarioBar !== (int) $usuario->idUsuario)
             ) {
                 return response()->json(['message' => 'No tienes permiso para registrar el pago de citas asignadas a otro barbero.'], 403);
             }
@@ -589,7 +595,7 @@ class GestionCitasController extends Controller
         }
 
         $citas = $consulta->orderBy('Fecha_hora')->orderBy('idCita')->lockForUpdate()->get();
-        $indice = $citas->search(fn ($citaGrupo) => (int) $citaGrupo->idCita === (int) $cita->idCita);
+        $indice = $citas->search(fn($citaGrupo) => (int) $citaGrupo->idCita === (int) $cita->idCita);
         if ($indice === false) {
             return new Collection([$cita]);
         }
@@ -624,7 +630,7 @@ class GestionCitasController extends Controller
     {
         $primeraCita = $citas->first();
         $total = $citas->sum(
-            fn ($citaGrupo) => $citaGrupo->servicios->sum(fn ($servicio) => $this->precioServicio($servicio))
+            fn($citaGrupo) => $citaGrupo->servicios->sum(fn($servicio) => $this->precioServicio($servicio))
         );
 
         $factura = Factura::create([
@@ -648,7 +654,7 @@ class GestionCitasController extends Controller
         $facturas = $cita->facturas()->with('citas.servicios')->get();
         foreach ($facturas as $factura) {
             $total = $factura->citas->sum(
-                fn ($citaFactura) => $citaFactura->servicios->sum(fn ($servicio) => $this->precioServicio($servicio))
+                fn($citaFactura) => $citaFactura->servicios->sum(fn($servicio) => $this->precioServicio($servicio))
             );
             $factura->update(['subtotal' => $total, 'total_pagar' => $total]);
         }
@@ -682,11 +688,11 @@ class GestionCitasController extends Controller
 
         $user = Auth::user();
         $cita = Citas::find($id);
-        if (! $cita) {
+        if (!$cita) {
             return response()->json(['result' => 'error', 'message' => 'Cita no encontrada'], 404);
         }
 
-        if (! $user || ! $user->roles) {
+        if (!$user || !$user->roles) {
             return response()->json(['result' => 'error', 'message' => 'Rol no definido'], 403);
         }
 
@@ -709,7 +715,7 @@ class GestionCitasController extends Controller
             && ($modificaProgramacion || $cancelaCita)
             && (
                 in_array($cita->estado, ['Cancelado', 'Finalizado'], true)
-                || ! $this->estaDentroDelPlazoMinimo($cita)
+                || !$this->estaDentroDelPlazoMinimo($cita)
             )
         ) {
             return response()->json(['result' => 'error', 'message' => 'Solo puedes modificar o cancelar la cita hasta dos horas antes de su inicio.'], 422);
@@ -719,7 +725,7 @@ class GestionCitasController extends Controller
             DB::beginTransaction();
 
             $cita = Citas::with(['servicios', 'factura'])->lockForUpdate()->find($id);
-            if (! $cita) {
+            if (!$cita) {
                 DB::rollBack();
 
                 return response()->json(['result' => 'error', 'message' => 'Cita no encontrada'], 404);
@@ -730,7 +736,7 @@ class GestionCitasController extends Controller
                 && (
                     (int) $cita->Usuario_idUsuarioCli !== (int) $user->idUsuario
                     || in_array($cita->estado, ['Cancelado', 'Finalizado'], true)
-                    || (($modificaProgramacion || $cancelaCita) && ! $this->estaDentroDelPlazoMinimo($cita))
+                    || (($modificaProgramacion || $cancelaCita) && !$this->estaDentroDelPlazoMinimo($cita))
                 )
             ) {
                 DB::rollBack();
@@ -739,7 +745,7 @@ class GestionCitasController extends Controller
             }
 
             $dataToUpdate = $request->only(['Usuario_idUsuarioBar', 'estado']);
-            if ($modificaProgramacion && ! $cancelaCita) {
+            if ($modificaProgramacion && !$cancelaCita) {
                 $dataToUpdate['fecha_agendada'] = now();
                 $dataToUpdate['estado'] = 'Confirmado';
                 $dataToUpdate['confirmacion_solicitada_at'] = null;
@@ -772,7 +778,7 @@ class GestionCitasController extends Controller
                     ->lockForUpdate()
                     ->find($barberoId);
 
-                if (! $barbero) {
+                if (!$barbero) {
                     DB::rollBack();
 
                     return response()->json(['result' => 'error', 'message' => 'El barbero seleccionado no existe.'], 422);
@@ -781,7 +787,7 @@ class GestionCitasController extends Controller
                 if ($request->has('servicios')) {
                     $idsServicios = array_column($request->input('servicios'), 'idServicio');
                     $catalogoServicios = Servicio::whereIn('idServicio', $idsServicios)->get()->keyBy('idServicio');
-                    $servicios = collect($idsServicios)->map(fn ($idServicio) => $catalogoServicios->get($idServicio));
+                    $servicios = collect($idsServicios)->map(fn($idServicio) => $catalogoServicios->get($idServicio));
                     $serviciosAnteriores = $cita->servicios;
                 } else {
                     $servicios = collect($this->serviciosProgramados($cita))->pluck('servicio');
@@ -810,16 +816,16 @@ class GestionCitasController extends Controller
                     $datosHistoricos = $this->datosHistoricosServicio($servicioAnterior ?? $servicio);
                     $desplazamientos[$servicio->idServicio] ??= [];
                     $desplazamiento = array_shift($desplazamientos[$servicio->idServicio]) ?? $desplazamientoSiguiente;
-                    $inicioServicio = $inicioCita->modify('+'.$desplazamiento.' minutes');
-                    $finServicio = $inicioServicio->modify('+'.max(1, $datosHistoricos['duracion_servicio']).' minutes');
-                    if (! $this->estaDentroDelHorario($barbero, $inicioServicio, $finServicio)) {
+                    $inicioServicio = $inicioCita->modify('+' . $desplazamiento . ' minutes');
+                    $finServicio = $inicioServicio->modify('+' . max(1, $datosHistoricos['duracion_servicio']) . ' minutes');
+                    if (!$this->estaDentroDelHorario($barbero, $inicioServicio, $finServicio)) {
                         DB::rollBack();
 
                         return response()->json(['result' => 'error', 'message' => 'La cita queda fuera del horario laboral del barbero.'], 422);
                     }
 
                     $fechaServicio = $inicioServicio->format('Y-m-d');
-                    if (! array_key_exists($fechaServicio, $intervalosPorFecha)) {
+                    if (!array_key_exists($fechaServicio, $intervalosPorFecha)) {
                         $intervalosPorFecha[$fechaServicio] = $this->obtenerIntervalosOcupados(
                             $barbero->idUsuario,
                             $fechaServicio,
@@ -827,7 +833,7 @@ class GestionCitasController extends Controller
                         );
                     }
 
-                    if (! $this->intervaloDisponible($inicioServicio, $finServicio, $intervalosPorFecha[$fechaServicio])) {
+                    if (!$this->intervaloDisponible($inicioServicio, $finServicio, $intervalosPorFecha[$fechaServicio])) {
                         DB::rollBack();
 
                         return response()->json(['result' => 'error', 'message' => 'Ese horario ya está ocupado. Elige otro horario.'], 422);
@@ -844,8 +850,8 @@ class GestionCitasController extends Controller
                     );
                 }
                 $inicioMasTemprano = collect($horariosServicios)
-                    ->map(fn ($horario) => new DateTimeImmutable($horario['fecha_hora_servicio']))
-                    ->sortBy(fn ($inicio) => $inicio->getTimestamp())
+                    ->map(fn($horario) => new DateTimeImmutable($horario['fecha_hora_servicio']))
+                    ->sortBy(fn($inicio) => $inicio->getTimestamp())
                     ->first();
                 if ($inicioMasTemprano) {
                     $dataToUpdate['Fecha_hora'] = $inicioMasTemprano->format('Y-m-d H:i:s');
@@ -894,12 +900,12 @@ class GestionCitasController extends Controller
     public function destroy(Request $request, $id)
     {
         $cita = Citas::find($id);
-        if (! $cita) {
+        if (!$cita) {
             return response()->json(['result' => 'error', 'message' => 'cita no encontrada'], 404);
         }
 
         $user = $request->user();
-        if (! $user || ! $user->roles) {
+        if (!$user || !$user->roles) {
             return response()->json(['result' => 'error', 'message' => 'Rol no definido'], 403);
         }
 
@@ -913,7 +919,7 @@ class GestionCitasController extends Controller
                 && new DateTimeImmutable($cita->Fecha_hora) > new DateTimeImmutable;
             if (
                 in_array($cita->estado, ['Cancelado', 'Finalizado'], true)
-                || (! $this->estaDentroDelPlazoMinimo($cita) && ! $puedeCancelarDuranteConfirmacion)
+                || (!$this->estaDentroDelPlazoMinimo($cita) && !$puedeCancelarDuranteConfirmacion)
             ) {
                 return response()->json(['result' => 'error', 'message' => 'Solo puedes cancelar la cita hasta dos horas antes de su inicio.'], 422);
             }
@@ -956,14 +962,14 @@ class GestionCitasController extends Controller
             $inicio = $servicio->pivot->fecha_hora_servicio
                 ? new DateTimeImmutable($servicio->pivot->fecha_hora_servicio)
                 : $siguiente;
-            $fin = $inicio->modify('+'.max(1, $this->duracionServicio($servicio)).' minutes');
+            $fin = $inicio->modify('+' . max(1, $this->duracionServicio($servicio)) . ' minutes');
             $programados[] = compact('servicio', 'inicio', 'fin');
             $siguiente = $fin;
         }
 
         return array_values(
             collect($programados)
-                ->sortBy(fn ($programado) => $programado['inicio']->getTimestamp())
+                ->sortBy(fn($programado) => $programado['inicio']->getTimestamp())
                 ->all()
         );
     }
@@ -1006,12 +1012,12 @@ class GestionCitasController extends Controller
     private function estaDentroDelHorario(usuario $barbero, DateTimeImmutable $inicio, DateTimeImmutable $fin): bool
     {
         foreach ($barbero->horariosLaborales as $horario) {
-            if (! $this->horarioCorrespondeAlDia($horario->diasemana, $inicio)) {
+            if (!$this->horarioCorrespondeAlDia($horario->diasemana, $inicio)) {
                 continue;
             }
 
-            $inicioJornada = new DateTimeImmutable($inicio->format('Y-m-d').' '.$horario->horainicio);
-            $finJornada = new DateTimeImmutable($inicio->format('Y-m-d').' '.$horario->horafin);
+            $inicioJornada = new DateTimeImmutable($inicio->format('Y-m-d') . ' ' . $horario->horainicio);
+            $finJornada = new DateTimeImmutable($inicio->format('Y-m-d') . ' ' . $horario->horafin);
             if ($inicio >= $inicioJornada && $fin <= $finJornada) {
                 return true;
             }
@@ -1026,16 +1032,16 @@ class GestionCitasController extends Controller
             ->where('Usuario_idUsuarioBar', $barberoId)
             ->whereDate('Fecha_hora', $fecha)
             ->where('estado', '!=', 'Cancelado')
-            ->when($citaExcluir, fn ($query) => $query->where('idCita', '!=', $citaExcluir))
+            ->when($citaExcluir, fn($query) => $query->where('idCita', '!=', $citaExcluir))
             ->get();
 
         $intervalos = [];
         foreach ($citas as $cita) {
-            $serviciosConHora = $cita->servicios->filter(fn ($servicio) => $servicio->pivot->fecha_hora_servicio);
+            $serviciosConHora = $cita->servicios->filter(fn($servicio) => $servicio->pivot->fecha_hora_servicio);
             if ($serviciosConHora->isNotEmpty()) {
                 foreach ($serviciosConHora as $servicio) {
                     $inicio = new DateTimeImmutable($servicio->pivot->fecha_hora_servicio);
-                    $fin = $inicio->modify('+'.max(1, $this->duracionServicio($servicio)).' minutes');
+                    $fin = $inicio->modify('+' . max(1, $this->duracionServicio($servicio)) . ' minutes');
                     $intervalos[] = [$inicio, $fin];
                 }
 
@@ -1043,8 +1049,8 @@ class GestionCitasController extends Controller
             }
 
             $inicio = new DateTimeImmutable($cita->Fecha_hora);
-            $duracion = $cita->servicios->sum(fn ($servicio) => $this->duracionServicio($servicio));
-            $fin = $inicio->modify('+'.max(1, $duracion ?: 60).' minutes');
+            $duracion = $cita->servicios->sum(fn($servicio) => $this->duracionServicio($servicio));
+            $fin = $inicio->modify('+' . max(1, $duracion ?: 60) . ' minutes');
             $intervalos[] = [$inicio, $fin];
         }
 

@@ -26,7 +26,7 @@ class PerfilController extends Controller
     {
         $usuario = $request->user();
         $esBarbero = $usuario->roles?->Nombre_rol === 'Barbero';
-        if (! $esBarbero && ($request->has('servicio_ids') || $request->has('horarios'))) {
+        if (!$esBarbero && ($request->has('servicio_ids') || $request->has('horarios'))) {
             return response()->json(['message' => 'Solo los barberos pueden modificar su especialidad y horarios.'], 403);
         }
 
@@ -37,7 +37,7 @@ class PerfilController extends Controller
                 'string',
                 'email',
                 'max:255',
-                Rule::unique('usuario', 'correo')->ignore($usuario->idUsuario, 'idUsuario'),
+                Rule::unique('Usuario', 'correo')->ignore($usuario->idUsuario, 'idUsuario'),
             ],
             'telefono' => ['required', 'string', 'max:45'],
             'contrasenha' => ['nullable', 'string', 'min:6'],
@@ -59,7 +59,7 @@ class PerfilController extends Controller
 
         $validador = Validator::make($request->all(), $reglas);
         $validador->after(function ($validador) use ($request, $esBarbero) {
-            if (! $esBarbero || ! is_array($request->input('horarios'))) {
+            if (!$esBarbero || !is_array($request->input('horarios'))) {
                 return;
             }
 
@@ -84,7 +84,7 @@ class PerfilController extends Controller
             $usuario->correo = $datos['correo'];
             $usuario->telefono = $datos['telefono'];
 
-            if (! empty($datos['contrasenha'])) {
+            if (!empty($datos['contrasenha'])) {
                 $usuario->contrasenha = Hash::make($datos['contrasenha']);
             }
 
@@ -100,8 +100,8 @@ class PerfilController extends Controller
                 $idsHorarios = collect($horarios)->map(function ($horario) {
                     return horario::firstOrCreate([
                         'diasemana' => $horario['diasemana'],
-                        'horainicio' => $horario['horainicio'].':00',
-                        'horafin' => $horario['horafin'].':00',
+                        'horainicio' => $horario['horainicio'] . ':00',
+                        'horafin' => $horario['horafin'] . ':00',
                     ])->idhorario;
                 });
 
@@ -128,16 +128,16 @@ class PerfilController extends Controller
             'correo' => $usuario->correo,
             'telefono' => $usuario->telefono,
             'servicio_ids' => $esBarbero
-            ? $usuario->especialidad()->pluck('servicio.idServicio')->values()
-            : [],
+                ? $usuario->especialidad()->pluck('servicio.idServicio')->values()
+                : [],
             'horarios' => $esBarbero
-                ? $usuario->horariosLaborales->map(fn ($horario) => [
+                ? $usuario->horariosLaborales->map(fn($horario) => [
                     'diasemana' => $horario->diasemana,
                     'horainicio' => substr($horario->horainicio, 0, 5),
                     'horafin' => substr($horario->horafin, 0, 5),
                 ])->values()
                 : [],
-            'foto_perfil' => $foto && ! str_starts_with($foto, 'http')
+            'foto_perfil' => $foto && !str_starts_with($foto, 'http')
                 ? Storage::disk('public')->url($foto)
                 : $foto,
         ];
