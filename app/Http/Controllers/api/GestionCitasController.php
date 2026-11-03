@@ -326,8 +326,8 @@ class GestionCitasController extends Controller
 
         $validator = Validator::make($request->all(), [
             'Fecha_hora' => 'required|date',
-            'Usuario_idUsuarioBar' => 'required|exists:usuario,idUsuario',
-            'Usuario_idUsuarioCli' => 'nullable|exists:usuario,idUsuario',
+            'Usuario_idUsuarioBar' => 'required|exists:Usuario,idUsuario',
+            'Usuario_idUsuarioCli' => 'nullable|exists:Usuario,idUsuario',
             'nombre_cliente' => 'required|string|max:255',
             'telefono_cliente' => 'required|string|max:45',
             'es_continuo' => 'required|boolean',
