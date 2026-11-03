@@ -22,6 +22,49 @@ class PerfilController extends Controller
         ]);
     }
 
+    public function actualizarFoto(Request $request): JsonResponse
+    {
+        $datos = $request->validate([
+            'foto' => [
+                'required',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:5120',
+                'dimensions:max_width=4096,max_height=4096',
+            ],
+        ], [
+            'foto.required' => 'Selecciona una foto para subir.',
+            'foto.image' => 'El archivo debe ser una imagen válida.',
+            'foto.mimes' => 'La foto debe estar en formato JPG, PNG o WebP.',
+            'foto.max' => 'La foto no puede superar los 5 MB.',
+            'foto.dimensions' => 'La foto no puede superar los 4096 píxeles de ancho o alto.',
+        ]);
+
+        $usuario = $request->user();
+        $fotoAnterior = $usuario->foto_perfil;
+        $rutaFoto = $datos['foto']->store('fotos-perfil', 'public');
+
+        if (! $rutaFoto) {
+            return response()->json([
+                'message' => 'No se pudo guardar la foto. Inténtalo de nuevo.',
+            ], 500);
+        }
+
+        $usuario->foto_perfil = $rutaFoto;
+        $usuario->save();
+
+        if ($fotoAnterior && ! str_starts_with($fotoAnterior, 'http')) {
+            Storage::disk('public')->delete($fotoAnterior);
+        }
+
+        $usuario->load('horariosLaborales');
+
+        return response()->json([
+            'message' => 'Foto de perfil actualizada correctamente.',
+            'data' => $this->datosPerfil($usuario),
+        ]);
+    }
+
     public function update(Request $request): JsonResponse
     {
         $usuario = $request->user();

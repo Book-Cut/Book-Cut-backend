@@ -37,6 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/citas/{id}/finalizar', [GestionCitasController::class, 'finalizar'])->name('citas.finalizar');
     Route::get('/perfil', [PerfilController::class, 'show']);
     Route::patch('/perfil', [PerfilController::class, 'update']);
+    Route::post('/perfil/foto', [PerfilController::class, 'actualizarFoto']);
 
     Route::apiResource('usuarios', usuarioController::class)->except(['store']);
 
