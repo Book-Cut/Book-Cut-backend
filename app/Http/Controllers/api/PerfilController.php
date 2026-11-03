@@ -180,9 +180,26 @@ class PerfilController extends Controller
                     'horafin' => substr($horario->horafin, 0, 5),
                 ])->values()
                 : [],
-            'foto_perfil' => $foto && !str_starts_with($foto, 'http')
-                ? Storage::disk('public')->url($foto)
-                : $foto,
+            'foto_perfil' => $this->urlFotoPerfil($foto),
         ];
+    }
+
+    private function urlFotoPerfil(?string $foto): ?string
+    {
+        if (! $foto) {
+            return null;
+        }
+
+        if (str_starts_with($foto, 'http')) {
+            $host = strtolower((string) parse_url($foto, PHP_URL_HOST));
+            if (! in_array($host, ['localhost', '127.0.0.1'], true)) {
+                return $foto;
+            }
+
+            $foto = ltrim((string) parse_url($foto, PHP_URL_PATH), '/');
+            $foto = preg_replace('#^storage/#', '', $foto);
+        }
+
+        return Storage::disk('public')->url($foto);
     }
 }
