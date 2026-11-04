@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class beneficios extends Model
 {
@@ -23,7 +24,8 @@ class beneficios extends Model
 
     public $table = 'beneficio';
 
-    public function getImagenUrlAttribute(){
-        return $this->imagen ? asset('storage/' . $this->imagen) : null;
+    public function getImagenUrlAttribute()
+    {
+        return $this->imagen ? Storage::disk('public')->url($this->imagen) : null;
     }
 }

@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
 class AutenticacionController extends Controller
 {
 
-    public function register(Request $request)
+    public function registro(Request $request)
     {
         $request->validate([
             'Nombre' => 'required|string|max:255',
