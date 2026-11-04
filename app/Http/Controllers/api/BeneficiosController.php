@@ -45,9 +45,26 @@ class BeneficiosController extends Controller
 
         $data = $request->except('imagen');
         if ($request->hasFile('imagen')) {
-            $data['imagen'] = $request->file('imagen')->store('beneficios', 'public');
+            $imagen = $request->file('imagen')->store('beneficios', 'public');
+            if (! $imagen) {
+                Log::error('No se pudo guardar la imagen del beneficio.', [
+                    'beneficio_id' => null,
+                    'usuario_id' => $user->idUsuario,
+                ]);
+
+                return response()->json([
+                    'message' => 'No se pudo guardar la imagen del beneficio. Inténtalo de nuevo.',
+                ], 500);
+            }
+            $data['imagen'] = $imagen;
         }
         $beneficios = beneficios::create($data);
+
+        return response()->json([
+            'result' => 'ok',
+            'message' => 'Beneficio creado correctamente.',
+            'beneficios' => $beneficios,
+        ], 201);
     }
 
     /**
@@ -88,9 +105,22 @@ class BeneficiosController extends Controller
         if ($beneficios) {
             $data = $request->except('imagen');
             if ($request->hasFile('imagen')) {
-                $data['imagen'] = $request->file('imagen')->store('beneficios', 'public');
+                $imagen = $request->file('imagen')->store('beneficios', 'public');
+                if (! $imagen) {
+                    Log::error('No se pudo guardar la imagen del beneficio.', [
+                        'beneficio_id' => $beneficios->ID_publicacion,
+                        'usuario_id' => $user->idUsuario,
+                    ]);
+
+                    return response()->json([
+                        'message' => 'No se pudo guardar la imagen del beneficio. Inténtalo de nuevo.',
+                    ], 500);
+                }
+                $data['imagen'] = $imagen;
             }
-            $beneficios -> update($data);
+
+            $beneficios->update($data);
+
             return response()->json(['result' => 'ok', 'message' => 'Beneficio actualizado correctamente', 'beneficios' => $beneficios]);
         } else {
             return response()->json(['result' => 'error', 'message' => 'Beneficio no encontrado'], 404);
@@ -142,7 +172,13 @@ class BeneficiosController extends Controller
             'Fecha_inicio' => 'required|date',
             'Fecha_fin' => 'required|date|after_or_equal:Fecha_inicio',
             'Usuario_idUsuario' => 'required',
-            'imagen' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:2048',
+            'imagen' => [
+                'nullable',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:2048',
+                'dimensions:min_width=800,min_height=450,max_width=4096,max_height=2304,ratio=16/9',
+            ],
         ], [
             'titulo.required' => 'El campo título es obligatorio.',
             'Tipo_beneficio.required' => 'El campo tipo es obligatorio.',
@@ -152,9 +188,10 @@ class BeneficiosController extends Controller
             'Fecha_fin.date' => 'El campo de fin debe ser una fecha válida.',
             'Fecha_fin.after_or_equal' => 'La fecha de fin debe ser igual o posterior a la fecha de inicio.',
             'Usuario_idUsuario.required' => 'No se pudo identificar al usuario administrador.',
-            'imagen.image' => 'La imagen debe estar en formato JPG, JPEG, PNG, WEBP o GIF.',
-            'imagen.mimes' => 'Formato de imagen no permitido. Usa JPG, JPEG, PNG, WEBP o GIF.',
+            'imagen.image' => 'El archivo debe ser una imagen válida.',
+            'imagen.mimes' => 'Formato de imagen no permitido. Usa JPG, JPEG, PNG o WebP.',
             'imagen.max' => 'La imagen no puede superar los 2 MB.',
+            'imagen.dimensions' => 'La imagen debe tener proporción 16:9 y medir entre 800 × 450 y 4096 × 2304 píxeles.',
         ]);
 
         if ($validator->fails() && $validator->errors()->has('imagen')) {
