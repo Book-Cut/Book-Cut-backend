@@ -71,7 +71,7 @@ class ValoraController extends Controller
         });
     }
 
-    public function listarValoraciones()
+    public function listarvaloraciones()
     {
         $usuario = auth()->user();
 
