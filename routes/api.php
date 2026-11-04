@@ -52,7 +52,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('facturas', FacturaController::class);
 
     Route::post('/citas/{id}/valoracion', [ValoraController::class, 'guardarValoracionCita']);
-    Route::get('/valoraciones', [ValoraController::class, 'listarvaloraciones']);
+    Route::get('/Valoraciones', [ValoraController::class, 'listarValoraciones']);
     Route::apiResource('valora', ValoraController::class);
     Route::apiResource('beneficios', BeneficiosController::class);
     Route::apiResource('horario', horarioController::class);
