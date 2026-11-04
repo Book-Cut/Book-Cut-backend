@@ -52,7 +52,7 @@ class AutenticacionController extends Controller
 
         $user = usuario::where('correo', $request->correo)->first();
 
-        //$users = usuario::all();
+        //hola $users = usuario::all();
 
         /*return response()->json([
             'result' => 'ok',
