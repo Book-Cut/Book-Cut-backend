@@ -94,7 +94,7 @@ class ValoraController extends Controller
                 DB::raw('c."Fecha_hora" as "Fecha_hora"'),
                 DB::raw('cli."Nombre" as "Cliente"'),
                 DB::raw('bar."Nombre" as "Barbero"'),
-                DB::raw("STRING_AGG(DISTINCT s.\Nombre\", ', ') as \"Servicios\""),
+                DB::raw('STRING_AGG(DISTINCT s."Nombre", \', \') as \"Servicios\"'),
             ])
             ->groupBy(
                 'v.Idvalora',
@@ -121,9 +121,9 @@ class ValoraController extends Controller
 
             if ((!$item->idCita || empty($cliente)) && $usuario->Roles_IDRol == 2) {
                 $citaCercana = DB::table('cita as c')
-                    ->leftJoin('usuario as cli', 'cli.idUsuario', '=', 'c.Usuario_idUsuarioCli')
+                    ->leftJoin('Usuario as cli', 'cli.idUsuario', '=', 'c.Usuario_idUsuarioCli')
                     ->leftJoin('cita_servicio as cs', 'cs.idCita', '=', 'c.idCita')
-                    ->leftJoin('servicio as s', 's.idServicio', '=', 'cs.idServicio')
+                    ->leftJoin('Servicio as s', 's.idServicio', '=', 'cs.idServicio')
                     ->where('c.Usuario_idUsuarioBar', $usuario->idUsuario)
                     ->where(function ($query) use ($fechaValoracion) {
                         if ($fechaValoracion) {
@@ -134,7 +134,7 @@ class ValoraController extends Controller
                     ->select([
                         'c.idCita',
                         'cli.Nombre as Cliente',
-                        DB::raw("GROUP_CONCAT(DISTINCT s.Nombre SEPARATOR ', ') as Servicios")
+                        DB::raw('STRING_AGG(DISTINCT s."Nombre", \', \') as \"Servicios\"'),
                     ])
                     ->groupBy('c.idCita', 'cli.Nombre')
                     ->orderBy('c.Fecha_hora', 'desc')
