@@ -120,23 +120,17 @@ class CitaSeeder extends Seeder
                 $idsServicios = collect($datosCita['servicios'])
                     ->map(fn($nombreServicio) => $servicios[$nombreServicio]->idServicio)
                     ->all();
-                /*$citasConServicios = DB::table('cita_servicio')
+                $queryGrammar = DB::connection()->getQueryGrammar();
+
+                $citasConServicios = DB::table('cita_servicio')
                     ->select('idCita')
                     ->whereIn('idServicio', $idsServicios)
                     ->groupBy('idCita')
-                    ->havingRaw('COUNT(DISTINCT cita_servicio.idServicio) = ?', [count($idsServicios)])
-                    ->pluck('idCita');*/
-
-                $sql = '
-    SELECT "cita_servicio"."idCita"
-    FROM "cita_servicio"
-    WHERE "cita_servicio"."idServicio" IN (' . implode(',', array_fill(0, count($idsServicios), '?')) . ')
-    GROUP BY "cita_servicio"."idCita"
-    HAVING COUNT(DISTINCT "cita_servicio"."idServicio") = ?';
-
-                $citasConServicios = collect(
-                    DB::select($sql, [...$idsServicios, count($idsServicios)])
-                )->pluck('idCita');
+                    ->havingRaw(
+                        'COUNT(DISTINCT ' . $queryGrammar->wrap('cita_servicio.idServicio') . ') = ?',
+                        [count($idsServicios)],
+                    )
+                    ->pluck('idCita');
 
                 $citaExistente = DB::table('cita')
                     ->where('Usuario_idUsuarioCli', $idCliente)
