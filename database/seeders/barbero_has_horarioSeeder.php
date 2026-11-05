@@ -15,6 +15,7 @@ class barbero_has_horarioSeeder extends Seeder
         $horarios = DB::table('horario')->pluck('idhorario', 'diasemana');
         $barberos = DB::table('Usuario')->whereIn('correo', ['carlos@bookcut.com', 'andres@bookcut.com'])->pluck('idUsuario', 'correo');
 
+
         foreach ([
             'carlos@bookcut.com' => ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
             'andres@bookcut.com' => ['Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],

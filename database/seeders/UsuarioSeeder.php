@@ -75,6 +75,7 @@ class UsuarioSeeder extends Seeder
                 'horario' => null,
                 'rol' => 'Cliente',
             ],
+            //*hola
         ];
 
         foreach ($usuarios as $usuario) {
