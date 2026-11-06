@@ -23,6 +23,7 @@ class CitasController extends Controller
             'factura.beneficio',
             'facturas.beneficio',
             'valora',
+            'afectadaPendiente',
         ]);
 
         if ($user->roles->Nombre_rol === 'Administrador') {
