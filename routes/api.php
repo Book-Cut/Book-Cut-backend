@@ -11,6 +11,9 @@ use App\Http\Controllers\api\PerfilController;
 use App\Http\Controllers\api\ServicioController;
 use App\Http\Controllers\api\usuarioController;
 use App\Http\Controllers\api\ValoraController;
+use App\Http\Controllers\api\IndisponibilidadController;
+use App\Http\Controllers\api\CitaAfectadaController;
+use App\Http\Controllers\api\NotificacionWebController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AutenticacionController::class, 'login']);
@@ -27,6 +30,17 @@ Route::post('/usuarios', [usuarioController::class, 'store']);
 Route::get('/servicios', [ServicioController::class, 'index']);
 Route::get('/barberos', [usuarioController::class, 'barberos']);
 Route::get('/beneficios-vigentes', [BeneficiosController::class, 'vigentes']);
+
+Route::post('/indisponibilidad', [IndisponibilidadController::class, 'store']);
+
+Route::get('/notificaciones', [NotificacionWebController::class, 'index']);
+Route::post('/notificaciones/{id}/leida', [NotificacionWebController::class, 'marcarLeida']);
+
+Route::post('/cita-afectada/{id}/cancelar', [CitaAfectadaController::class, 'cancelar']);
+Route::get('/cita-afectada/{id}/horarios', [CitaAfectadaController::class, 'horarios']);
+Route::post('/cita-afectada/{id}/reagendar', [CitaAfectadaController::class, 'reagendar']);
+Route::get('/cita-afectada/{id}/barberos-alternativos', [CitaAfectadaController::class, 'barberosAlternativos']);
+Route::post('/cita-afectada/{id}/otro-barbero', [CitaAfectadaController::class, 'otroBarbero']);
 
 Route::middleware('auth:sanctum')->group(function () {
 

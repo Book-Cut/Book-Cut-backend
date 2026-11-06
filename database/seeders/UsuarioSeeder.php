@@ -30,7 +30,7 @@ class UsuarioSeeder extends Seeder
                 'Nombre' => 'Carlos Gomez',
                 'correo' => 'carlos@bookcut.com',
                 'telefono' => '3102223344',
-                'contrasenha' => 'barbero123',
+                'contrasenha' => 'barbero1234',
                 'especialidad' => 'Cortes Clasicos',
                 'horario' => '1',
                 'rol' => 'Barbero',

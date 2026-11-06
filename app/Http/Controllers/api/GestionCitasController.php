@@ -7,6 +7,7 @@ use App\Models\Citas;
 use App\Models\factura as Factura;
 use App\Models\Servicio;
 use App\Models\usuario;
+use App\Models\indisponibilidad;
 use DateTimeImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
@@ -14,6 +15,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use App\Models\notificacionWeb;
+use Illuminate\Support\Facades\Mail;
 
 class GestionCitasController extends Controller
 {
@@ -897,7 +900,7 @@ class GestionCitasController extends Controller
         }
     }
 
-    public function destroy(Request $request, $id)
+        public function destroy(Request $request, $id)
     {
         $cita = Citas::find($id);
         if (!$cita) {
@@ -909,7 +912,12 @@ class GestionCitasController extends Controller
             return response()->json(['result' => 'error', 'message' => 'Rol no definido'], 403);
         }
 
-        if ($user->roles->Nombre_rol === 'Cliente') {
+        $esCliente = $user->roles->Nombre_rol === 'Cliente';
+        $motivo = $request->validate([
+            'motivo' => ($esCliente ? 'nullable' : 'required') . '|string|max:255',
+        ])['motivo'] ?? null;
+
+        if ($esCliente) {
             if ((int) $cita->Usuario_idUsuarioCli !== (int) $user->idUsuario) {
                 return response()->json(['result' => 'error', 'message' => 'Sin autorización'], 403);
             }
@@ -935,7 +943,31 @@ class GestionCitasController extends Controller
             ->update(['token_confirmacion' => null]);
         $cita->facturas()->update(['estado_factura' => 'Anulada']);
 
-        return response()->json(['result' => 'ok', 'message' => 'cita eliminada']);
+        $correoEnviado = false;
+        if (!$esCliente && $cita->Usuario_idUsuarioCli) {
+            $cita->load(['cliente', 'barbero']);
+            $mensaje = "Tu cita del {$cita->Fecha_hora} con {$cita->barbero->Nombre} fue cancelada. Motivo: {$motivo}.";
+
+            try {
+                notificacionWeb::create([
+                    'Usuario_idUsuario' => $cita->Usuario_idUsuarioCli,
+                    'titulo' => 'Tu cita fue cancelada',
+                    'mensaje' => $mensaje,
+                ]);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+
+            try {
+                Mail::raw("Hola {$cita->cliente->Nombre},\n\n$mensaje", fn ($m) =>
+                    $m->to($cita->cliente->correo)->subject('Tu cita en Book&Cut fue cancelada'));
+                $correoEnviado = true;
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
+        return response()->json(['result' => 'ok', 'message' => 'cita eliminada', 'correo_enviado' => $correoEnviado]);
     }
 
     private function estaDentroDelPlazoMinimo(Citas $cita): bool
@@ -1054,6 +1086,17 @@ class GestionCitasController extends Controller
             $intervalos[] = [$inicio, $fin];
         }
 
+        $bloqueos = indisponibilidad::where('Usuario_idUsuarioBar', $barberoId)
+            ->whereDate('fecha', $fecha)
+            ->get();
+
+        foreach ($bloqueos as $bloqueo) {
+            $intervalos[] = [
+                new DateTimeImmutable($fecha . ' ' . ($bloqueo->hora_inicio ?? '00:00:00')),
+                new DateTimeImmutable($fecha . ' ' . ($bloqueo->hora_fin ?? '23:59:59')),
+            ];
+        }
+
         return $intervalos;
     }
 
@@ -1068,3 +1111,4 @@ class GestionCitasController extends Controller
         return true;
     }
 }
+
