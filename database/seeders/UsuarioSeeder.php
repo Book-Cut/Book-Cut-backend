@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Hash;
 
 class UsuarioSeeder extends Seeder
 {
-    /**
+    /**a
      * Run the database seeds.
      */
     public function run(): void
