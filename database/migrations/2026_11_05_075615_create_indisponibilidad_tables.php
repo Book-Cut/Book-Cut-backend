@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('indisponibilidad', function (Blueprint $table) {
@@ -18,8 +17,8 @@ return new class extends Migration
             $table->unsignedBigInteger('Usuario_idUsuarioReg');
             $table->timestamp('created_at')->useCurrent();
 
-            $table->foreign('Usuario_idUsuarioBar')->references('idUsuario')->on('usuario');
-            $table->foreign('Usuario_idUsuarioReg')->references('idUsuario')->on('usuario');
+            $table->foreign('Usuario_idUsuarioBar')->references('idUsuario')->on('Usuario');
+            $table->foreign('Usuario_idUsuarioReg')->references('idUsuario')->on('Usuario');
             $table->index(['Usuario_idUsuarioBar', 'fecha']);
         });
 
@@ -44,7 +43,7 @@ return new class extends Migration
             $table->boolean('leida')->default(false);
             $table->timestamp('created_at')->useCurrent();
 
-            $table->foreign('Usuario_idUsuario')->references('idUsuario')->on('usuario')->onDelete('cascade');
+            $table->foreign('Usuario_idUsuario')->references('idUsuario')->on('Usuario')->onDelete('cascade');
             $table->foreign('CitaAfectada_id')->references('idCitaAfectada')->on('cita_afectada')->onDelete('set null');
         });
     }
