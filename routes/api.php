@@ -2,23 +2,27 @@
 
 use App\Http\Controllers\api\AutenticacionController;
 use App\Http\Controllers\api\BeneficiosController;
+use App\Http\Controllers\api\CitaAfectadaController;
 use App\Http\Controllers\api\CitasController;
 use App\Http\Controllers\api\FacturaController;
 use App\Http\Controllers\api\GestionCitasController;
-use App\Http\Controllers\api\NotificacionController;
 use App\Http\Controllers\api\horarioController;
+use App\Http\Controllers\api\IndisponibilidadController;
+use App\Http\Controllers\api\NotificacionController;
+use App\Http\Controllers\api\NotificacionWebController;
 use App\Http\Controllers\api\PerfilController;
 use App\Http\Controllers\api\ServicioController;
 use App\Http\Controllers\api\usuarioController;
 use App\Http\Controllers\api\ValoraController;
-use App\Http\Controllers\api\IndisponibilidadController;
-use App\Http\Controllers\api\CitaAfectadaController;
-use App\Http\Controllers\api\NotificacionWebController;
+use App\Http\Controllers\SocialAuthController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AutenticacionController::class, 'login']);
 Route::post('/registro', [AutenticacionController::class, 'registro']);
-
+Route::post('/auth/mobile/social/register', [SocialAuthController::class, 'startRegistration'])
+    ->middleware('throttle:10,1');
+Route::post('/auth/mobile/exchange', [SocialAuthController::class, 'exchange'])
+    ->middleware('throttle:10,1');
 
 Route::post('/registro/send-code', [AutenticacionController::class, 'sendRegisterCode']);
 Route::post('/registro/verify', [AutenticacionController::class, 'verifyRegisterCode']);
