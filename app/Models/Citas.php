@@ -76,4 +76,9 @@ class Citas extends Model
     {
         return $this->cliente();
     }
+
+    public function afectadaPendiente()
+    {
+        return $this->hasOne(citaAfectada::class, 'Cita_idCita', 'idCita')->where('respuesta', 'Pendiente');
+    }
 }

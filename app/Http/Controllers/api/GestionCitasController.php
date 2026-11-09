@@ -8,6 +8,7 @@ use App\Models\factura as Factura;
 use App\Models\Servicio;
 use App\Models\usuario;
 use App\Models\indisponibilidad;
+use App\Models\citaAfectada;
 use DateTimeImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
@@ -216,6 +217,7 @@ class GestionCitasController extends Controller
             $cita->estado = 'Confirmado';
             $cita->confirmacion_solicitada_at = null;
             $cita->save();
+            $this->cerrarAfectada($cita->idCita, 'Reagendada');
             DB::table('notificacion')
                 ->where('Cita_idCita', $cita->idCita)
                 ->where('evento', 'confirmacion')
@@ -942,6 +944,7 @@ class GestionCitasController extends Controller
             ->whereNotNull('token_confirmacion')
             ->update(['token_confirmacion' => null]);
         $cita->facturas()->update(['estado_factura' => 'Anulada']);
+        $this->cerrarAfectada($cita->idCita, 'Cancelada');
 
         $correoEnviado = false;
         if (!$esCliente && $cita->Usuario_idUsuarioCli) {
@@ -972,14 +975,20 @@ class GestionCitasController extends Controller
 
     private function estaDentroDelPlazoMinimo(Citas $cita): bool
     {
-        return $this->inicioCita($cita) > now()->addHours(2)->toDateTimeImmutable();
+        $limite = $this->citaAfectadaPendiente($cita) ? now() : now()->addHours(2);
+
+        return $this->inicioCita($cita) > $limite->toDateTimeImmutable();
+
     }
 
-    private function inicioCita(Citas $cita): DateTimeImmutable
+    private function citaAfectadaPendiente (Citas $cita): bool
     {
-        $servicios = $this->serviciosProgramados($cita);
+        return citaAfectada::where('Cita_idCita', $cita->idCita)->where('respuesta', 'Pendiente')->exists();
+    }
 
-        return $servicios[0]['inicio'] ?? new DateTimeImmutable($cita->Fecha_hora);
+    private function cerrarAfectada(int $idCita, string $respuesta): void
+    {
+        citaAfectada::where('Cita_idCita', $idCita)->where('respuesta', 'Pendiente')->update(['respuesta' => $respuesta, 'respondida_at' => now()]);
     }
 
     private function serviciosProgramados(Citas $cita): array

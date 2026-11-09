@@ -81,7 +81,7 @@ class IndisponibilidadController extends Controller
 
         });
 
-        $enlace = rtrim(env('FRONTEND_URL', 'http://localhost:5173'), '/') . '/mis-citas';
+        $enlace = rtrim(explode('#', config('app.frontend_url'))[0], '/') . '/#/mis-citas';
         foreach ($avisos['avisos'] as [$cliente, $mensaje]) {
             try {
                 Mail::raw("Hola {$cliente->Nombre},\n\n $mensaje\n\nPuedes gestionar tu cita aquí: $enlace", function ($message) use ($cliente) {
