@@ -15,31 +15,31 @@ class usuarioController extends Controller
 {
     public function barberos()
     {
-        $barberos = Cache::remember('lista_barberos_catalogo', 3600, function () {
-            return usuario::query()
-                ->where('Roles_IDRol', 2)
-                ->orderBy('Nombre')
-                ->get(['idUsuario', 'Nombre', 'especialidad', 'foto_perfil'])
-                ->map(function ($barbero) {
-                    $servicios = $barbero->especialidad()
-                        ->pluck('Nombre')
-                        ->implode(', ');
-                    $especialidad = $servicios ?: $barbero->getOriginal('especialidad');
-                    $foto = $barbero->foto_perfil;
-                    if ($foto && !str_starts_with($foto, 'http')) {
-                        $foto = Storage::disk('public')->url($foto);
-                    }
+        Cache::forget('lista_barberos_catalogo');
 
-                    return [
-                        'idUsuario' => $barbero->idUsuario,
-                        'Nombre' => $barbero->Nombre,
-                        'especialidad' => $especialidad,
-                        'foto_perfil' => $foto,
-                    ];
-                })
-                ->values()
-                ->all();
-        });
+        $barberos = usuario::query()
+            ->where('Roles_IDRol', 2)
+            ->orderBy('Nombre')
+            ->get(['idUsuario', 'Nombre', 'especialidad', 'foto_perfil'])
+            ->map(function ($barbero) {
+                $servicios = $barbero->especialidad()
+                    ->pluck('Nombre')
+                    ->implode(', ');
+                $especialidad = $servicios ?: $barbero->getOriginal('especialidad');
+                $foto = $barbero->foto_perfil;
+                if ($foto && !str_starts_with($foto, 'http')) {
+                    $foto = Storage::disk('public')->url($foto);
+                }
+
+                return [
+                    'idUsuario' => $barbero->idUsuario,
+                    'Nombre' => $barbero->Nombre,
+                    'especialidad' => $especialidad,
+                    'foto_perfil' => $foto,
+                ];
+            })
+            ->values()
+            ->all();
 
         return response()->json(['data' => $barberos]);
     }

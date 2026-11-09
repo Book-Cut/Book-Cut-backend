@@ -17,11 +17,14 @@ class ServicioController extends Controller
      */
     public function index()
     {
-        $servicios = Cache::remember('catalogo_servicios', 3600, function () {
-            return Servicio::all()->toArray();
-        });
+        Cache::forget('catalogo_servicios');
+        $servicios = Servicio::all();
 
-        return response()->json(['result' => 'ok', 'message' => 'Servicios obtenidos correctamente', 'data' => $servicios]);
+        return response()->json([
+            'result' => 'ok',
+            'message' => 'Servicios obtenidos correctamente',
+            'data' => $servicios,
+        ]);
     }
 
     /**

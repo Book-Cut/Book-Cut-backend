@@ -48,12 +48,23 @@ Route::post('/cita-afectada/{id}/reagendar', [CitaAfectadaController::class, 're
 Route::get('/cita-afectada/{id}/barberos-alternativos', [CitaAfectadaController::class, 'barberosAlternativos']);
 Route::post('/cita-afectada/{id}/otro-barbero', [CitaAfectadaController::class, 'otroBarbero']);
 
-// Endpoint seguro para invocar el procesamiento de confirmaciones vía Webhook/Cron externo
+// Endpoint seguro para invocar el procesamiento de confirmaciones vía Webhook/Cron externo o mantenimiento
 Route::get('/cron/procesar-confirmaciones', function (\Illuminate\Http\Request $request) {
     $token = $request->query('token');
     $tokenEsperado = config('app.cron_token', env('CRON_TOKEN', 'bookcut_cron_secret_2026'));
     if ($token !== $tokenEsperado) {
         return response()->json(['error' => 'No autorizado'], 403);
+    }
+    if ($request->query('action') === 'cache-clear') {
+        \Illuminate\Support\Facades\Cache::flush();
+        \Illuminate\Support\Facades\Artisan::call('cache:clear');
+        \Illuminate\Support\Facades\Artisan::call('config:clear');
+        \Illuminate\Support\Facades\Artisan::call('route:clear');
+        return response()->json([
+            'status' => 'success',
+            'mensaje' => 'Cache y configuracion limpiados exitosamente',
+            'ejecutado_at' => now()->toDateTimeString(),
+        ]);
     }
     Artisan::call('citas:procesar-confirmaciones');
     return response()->json([

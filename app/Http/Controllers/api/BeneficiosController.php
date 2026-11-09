@@ -162,14 +162,11 @@ class BeneficiosController extends Controller
     public function vigentes()
     {
         $hoy = now()->toDateString();
-        $cacheKey = 'beneficios_vigentes_' . $hoy;
+        Cache::forget('beneficios_vigentes_' . $hoy);
 
-        $data = Cache::remember($cacheKey, 1800, function () use ($hoy) {
-            return beneficios::where('Fecha_inicio', '<=', $hoy)
-                ->where('Fecha_fin', '>=', $hoy)
-                ->get()
-                ->toArray();
-        });
+        $data = beneficios::where('Fecha_inicio', '<=', $hoy)
+            ->where('Fecha_fin', '>=', $hoy)
+            ->get();
 
         return response()->json(['result' => 'ok', 'data' => $data]);
     }
