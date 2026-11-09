@@ -2,23 +2,29 @@
 
 use App\Http\Controllers\api\AutenticacionController;
 use App\Http\Controllers\api\BeneficiosController;
+use App\Http\Controllers\api\CitaAfectadaController;
 use App\Http\Controllers\api\CitasController;
 use App\Http\Controllers\api\FacturaController;
 use App\Http\Controllers\api\GestionCitasController;
-use App\Http\Controllers\api\NotificacionController;
 use App\Http\Controllers\api\horarioController;
+use App\Http\Controllers\api\IndisponibilidadController;
+use App\Http\Controllers\api\NotificacionController;
+use App\Http\Controllers\api\NotificacionWebController;
 use App\Http\Controllers\api\PerfilController;
 use App\Http\Controllers\api\ServicioController;
 use App\Http\Controllers\api\usuarioController;
 use App\Http\Controllers\api\ValoraController;
-use App\Http\Controllers\api\IndisponibilidadController;
-use App\Http\Controllers\api\CitaAfectadaController;
-use App\Http\Controllers\api\NotificacionWebController;
+use App\Http\Controllers\SocialAuthController;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AutenticacionController::class, 'login']);
 Route::post('/registro', [AutenticacionController::class, 'registro']);
-
+Route::post('/auth/mobile/social/register', [SocialAuthController::class, 'startRegistration'])
+    ->middleware('throttle:10,1');
+Route::post('/auth/mobile/exchange', [SocialAuthController::class, 'exchange'])
+    ->middleware('throttle:10,1');
 
 Route::post('/registro/send-code', [AutenticacionController::class, 'sendRegisterCode']);
 Route::post('/registro/verify', [AutenticacionController::class, 'verifyRegisterCode']);
@@ -41,6 +47,21 @@ Route::get('/cita-afectada/{id}/horarios', [CitaAfectadaController::class, 'hora
 Route::post('/cita-afectada/{id}/reagendar', [CitaAfectadaController::class, 'reagendar']);
 Route::get('/cita-afectada/{id}/barberos-alternativos', [CitaAfectadaController::class, 'barberosAlternativos']);
 Route::post('/cita-afectada/{id}/otro-barbero', [CitaAfectadaController::class, 'otroBarbero']);
+
+// Endpoint seguro para invocar el procesamiento de confirmaciones vía Webhook/Cron externo
+Route::get('/cron/procesar-confirmaciones', function (\Illuminate\Http\Request $request) {
+    $token = $request->query('token');
+    $tokenEsperado = config('app.cron_token', env('CRON_TOKEN', 'bookcut_cron_secret_2026'));
+    if ($token !== $tokenEsperado) {
+        return response()->json(['error' => 'No autorizado'], 403);
+    }
+    Artisan::call('citas:procesar-confirmaciones');
+    return response()->json([
+        'status' => 'success',
+        'mensaje' => 'Confirmaciones procesadas correctamente',
+        'ejecutado_at' => now()->toDateTimeString(),
+    ]);
+});
 
 Route::middleware('auth:sanctum')->group(function () {
 
