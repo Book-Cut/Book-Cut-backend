@@ -1,24 +1,33 @@
 <?php
-
 use App\Http\Controllers\api\AutenticacionController;
 use App\Http\Controllers\api\BeneficiosController;
+use App\Http\Controllers\api\CitaAfectadaController;
 use App\Http\Controllers\api\CitasController;
 use App\Http\Controllers\api\FacturaController;
 use App\Http\Controllers\api\GestionCitasController;
-use App\Http\Controllers\api\NotificacionController;
 use App\Http\Controllers\api\horarioController;
+use App\Http\Controllers\api\IndisponibilidadController;
+use App\Http\Controllers\api\NotificacionController;
+use App\Http\Controllers\api\NotificacionWebController;
 use App\Http\Controllers\api\PerfilController;
 use App\Http\Controllers\api\ServicioController;
 use App\Http\Controllers\api\usuarioController;
 use App\Http\Controllers\api\ValoraController;
-use App\Http\Controllers\api\IndisponibilidadController;
-use App\Http\Controllers\api\CitaAfectadaController;
-use App\Http\Controllers\api\NotificacionWebController;
+use App\Http\Controllers\SocialAuthController;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AutenticacionController::class, 'login']);
 Route::post('/registro', [AutenticacionController::class, 'registro']);
-
+Route::post('/auth/mobile/social/register', [SocialAuthController::class, 'startRegistration'])
+    ->middleware('throttle:10,1');
+Route::post('/auth/mobile/exchange', [SocialAuthController::class, 'exchange'])
+    ->middleware('throttle:10,1');
+Route::post('/auth/mobile/social/register', [SocialAuthController::class, 'startRegistration'])
+    ->middleware('throttle:10,1');
+Route::post('/auth/mobile/exchange', [SocialAuthController::class, 'exchange'])
+    ->middleware('throttle:10,1');
 
 Route::post('/registro/send-code', [AutenticacionController::class, 'sendRegisterCode']);
 Route::post('/registro/verify', [AutenticacionController::class, 'verifyRegisterCode']);
@@ -31,7 +40,7 @@ Route::get('/servicios', [ServicioController::class, 'index']);
 Route::get('/barberos', [usuarioController::class, 'barberos']);
 Route::get('/beneficios-vigentes', [BeneficiosController::class, 'vigentes']);
 
-Route::post('/indisponibilidad', [IndisponibilidadController::class, 'store']);
+
 
 Route::get('/notificaciones', [NotificacionWebController::class, 'index']);
 Route::post('/notificaciones/{id}/leida', [NotificacionWebController::class, 'marcarLeida']);
@@ -41,6 +50,32 @@ Route::get('/cita-afectada/{id}/horarios', [CitaAfectadaController::class, 'hora
 Route::post('/cita-afectada/{id}/reagendar', [CitaAfectadaController::class, 'reagendar']);
 Route::get('/cita-afectada/{id}/barberos-alternativos', [CitaAfectadaController::class, 'barberosAlternativos']);
 Route::post('/cita-afectada/{id}/otro-barbero', [CitaAfectadaController::class, 'otroBarbero']);
+
+// Endpoint seguro para invocar el procesamiento de confirmaciones vía Webhook/Cron externo o mantenimiento
+Route::get('/cron/procesar-confirmaciones', function (\Illuminate\Http\Request $request) {
+    $token = $request->query('token');
+    $tokenEsperado = config('app.cron_token', env('CRON_TOKEN', 'bookcut_cron_secret_2026'));
+    if ($token !== $tokenEsperado) {
+        return response()->json(['error' => 'No autorizado'], 403);
+    }
+    if ($request->query('action') === 'cache-clear') {
+        \Illuminate\Support\Facades\Cache::flush();
+        \Illuminate\Support\Facades\Artisan::call('cache:clear');
+        \Illuminate\Support\Facades\Artisan::call('config:clear');
+        \Illuminate\Support\Facades\Artisan::call('route:clear');
+        return response()->json([
+            'status' => 'success',
+            'mensaje' => 'Cache y configuracion limpiados exitosamente',
+            'ejecutado_at' => now()->toDateTimeString(),
+        ]);
+    }
+    Artisan::call('citas:procesar-confirmaciones');
+    return response()->json([
+        'status' => 'success',
+        'mensaje' => 'Confirmaciones procesadas correctamente',
+        'ejecutado_at' => now()->toDateTimeString(),
+    ]);
+});
 
 Route::middleware('auth:sanctum')->group(function () {
 
@@ -52,6 +87,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/perfil', [PerfilController::class, 'show']);
     Route::patch('/perfil', [PerfilController::class, 'update']);
     Route::post('/perfil/foto', [PerfilController::class, 'actualizarFoto']);
+    Route::post('/indisponibilidad', [IndisponibilidadController::class, 'store']);
 
     Route::apiResource('usuarios', usuarioController::class)->except(['store']);
 
@@ -66,7 +102,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('facturas', FacturaController::class);
 
     Route::post('/citas/{id}/valoracion', [ValoraController::class, 'guardarValoracionCita']);
-    Route::get('/valoraciones', [ValoraController::class, 'listarValoraciones']);
+    Route::get('/valoraciones', [ValoraController::class, 'listarvaloraciones']);
     Route::apiResource('valora', ValoraController::class);
     Route::apiResource('beneficios', BeneficiosController::class);
     Route::apiResource('horario', horarioController::class);
@@ -83,4 +119,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:1')->put('/facturas/{id}', [FacturaController::class, 'update']);
     Route::middleware('role:1')->delete('/facturas/{id}', [FacturaController::class, 'destroy']);
 
+   
 });
