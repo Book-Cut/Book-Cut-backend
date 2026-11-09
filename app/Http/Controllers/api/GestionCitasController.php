@@ -52,9 +52,14 @@ class GestionCitasController extends Controller
                 return response()->json(['message' => 'No tienes permiso para consultar esta cita.'], 403);
             }
 
+            $puedeReagendarDuranteConfirmacion = $citaExcluir->estado === 'Pendiente'
+                && $citaExcluir->confirmacion_solicitada_at
+                && $citaExcluir->confirmacion_solicitada_at->copy()->addMinutes(30)->gt(now())
+                && new DateTimeImmutable($citaExcluir->Fecha_hora) > new DateTimeImmutable;
+
             if (
                 in_array($citaExcluir->estado, ['Cancelado', 'Finalizado'], true)
-                || !$this->estaDentroDelPlazoMinimo($citaExcluir)
+                || (!$this->estaDentroDelPlazoMinimo($citaExcluir) && !$puedeReagendarDuranteConfirmacion)
                 || $this->inicioCita($citaExcluir) <= new DateTimeImmutable
             ) {
                 return response()->json(['message' => 'Esta cita ya no permite consultar horarios para reagendar.'], 422);
@@ -145,11 +150,17 @@ class GestionCitasController extends Controller
         if (in_array($cita->estado, ['Cancelado', 'Finalizado'], true)) {
             return response()->json(['message' => 'Esta cita ya no se puede reagendar.'], 422);
         }
-        if (!$this->estaDentroDelPlazoMinimo($cita)) {
-            return response()->json(['message' => 'Solo puedes reagendar hasta dos horas antes de que comience la cita.'], 422);
+
+        $puedeReagendarDuranteConfirmacion = $cita->estado === 'Pendiente'
+            && $cita->confirmacion_solicitada_at
+            && $cita->confirmacion_solicitada_at->copy()->addMinutes(30)->gt(now())
+            && new DateTimeImmutable($cita->Fecha_hora) > new DateTimeImmutable;
+
+        if (!$this->estaDentroDelPlazoMinimo($cita) && !$puedeReagendarDuranteConfirmacion) {
+            return response()->json(['message' => 'Solo puedes reagendar hasta dos horas antes de que comience la cita o durante la ventana de confirmación.'], 422);
         }
 
-        return DB::transaction(function () use ($datos, $id, $usuario, $cita) {
+        return DB::transaction(function () use ($datos, $id, $usuario, $cita, $puedeReagendarDuranteConfirmacion) {
             $barbero = usuario::with('horariosLaborales')
                 ->where('Roles_IDRol', 2)
                 ->lockForUpdate()
@@ -161,9 +172,9 @@ class GestionCitasController extends Controller
                 !$cita
                 || (int) $cita->Usuario_idUsuarioCli !== (int) $usuario->idUsuario
                 || in_array($cita->estado, ['Cancelado', 'Finalizado'], true)
-                || !$this->estaDentroDelPlazoMinimo($cita)
+                || (!$this->estaDentroDelPlazoMinimo($cita) && !$puedeReagendarDuranteConfirmacion)
             ) {
-                return response()->json(['message' => 'Esta cita ya no se puede reagendar. Debes hacerlo al menos dos horas antes.'], 422);
+                return response()->json(['message' => 'Esta cita ya no se puede reagendar. Debes hacerlo al menos dos horas antes o durante la ventana de confirmación.'], 422);
             }
 
             if (!$barbero || $cita->servicios->isEmpty()) {
@@ -921,15 +932,8 @@ class GestionCitasController extends Controller
             if ((int) $cita->Usuario_idUsuarioCli !== (int) $user->idUsuario) {
                 return response()->json(['result' => 'error', 'message' => 'Sin autorización'], 403);
             }
-            $puedeCancelarDuranteConfirmacion = $cita->estado === 'Pendiente'
-                && $cita->confirmacion_solicitada_at
-                && $cita->confirmacion_solicitada_at->copy()->addMinutes(30)->gt(now())
-                && new DateTimeImmutable($cita->Fecha_hora) > new DateTimeImmutable;
-            if (
-                in_array($cita->estado, ['Cancelado', 'Finalizado'], true)
-                || (!$this->estaDentroDelPlazoMinimo($cita) && !$puedeCancelarDuranteConfirmacion)
-            ) {
-                return response()->json(['result' => 'error', 'message' => 'Solo puedes cancelar la cita hasta dos horas antes de su inicio.'], 422);
+            if (in_array($cita->estado, ['Cancelado', 'Finalizado'], true)) {
+                return response()->json(['result' => 'error', 'message' => 'Esta cita ya no se puede cancelar.'], 422);
             }
         }
 
