@@ -14,14 +14,37 @@ use Illuminate\Support\Str;
 
 class AutenticacionController extends Controller
 {
+    protected function allowedEmailDomainRule(): callable
+    {
+        return function (string $attribute, mixed $value, \Closure $fail): void {
+            $email = strtolower(trim((string) $value));
+
+            if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $fail('El correo electrónico no es válido.');
+
+                return;
+            }
+
+            $domain = substr($email, strrpos($email, '@') + 1);
+            $allowedDomains = ['gmail.com', 'hotmail.com', 'outlook.com', 'sena.edu.co'];
+
+            if (! in_array($domain, $allowedDomains, true)) {
+                $fail('Solo se permite correos de los siguientes dominios: @gmail.com, @hotmail.com, @outlook.com, @sena.edu.co.');
+            }
+        };
+    }
 
     public function registro(Request $request)
     {
         $request->validate([
             'Nombre' => 'required|string|max:255',
-            'correo' => 'required|string|email|max:255|unique:Usuario,correo',
+            'correo' => ['required', 'string', 'email', 'max:255', 'unique:Usuario,correo', $this->allowedEmailDomainRule()],
             'telefono' => 'required|string|max:45',
             'contrasenha' => 'required|string|min:6',
+            'terminos_aceptados' => 'required|accepted',
+        ], [
+            'terminos_aceptados.required' => 'Debes aceptar los términos y condiciones.',
+            'terminos_aceptados.accepted' => 'Debes aceptar los términos y condiciones.',
         ]);
 
         $user = usuario::create([
@@ -30,6 +53,7 @@ class AutenticacionController extends Controller
             'telefono' => $request->telefono,
             'contrasenha' => Hash::make($request->contrasenha),
             'Roles_IDRol' => 3,
+            'terminos_aceptados' => true,
         ]);
 
         $token = $user->createToken('book_cut_api')->plainTextToken;
@@ -52,7 +76,7 @@ class AutenticacionController extends Controller
 
         $user = usuario::where('correo', $request->correo)->first();
 
-        //$users = usuario::all();
+        //hola $users = usuario::all();
 
         /*return response()->json([
             'result' => 'ok',
@@ -147,9 +171,13 @@ class AutenticacionController extends Controller
     {
         $request->validate([
             'Nombre' => 'required|string|max:255',
-            'correo' => 'required|string|email|max:255|unique:Usuario,correo',
+            'correo' => ['required', 'string', 'email', 'max:255', 'unique:Usuario,correo', $this->allowedEmailDomainRule()],
             'telefono' => 'required|string|max:45',
             'contrasenha' => 'required|string|min:6',
+            'terminos_aceptados' => 'required|accepted',
+        ], [
+            'terminos_aceptados.required' => 'Debes aceptar los términos y condiciones.',
+            'terminos_aceptados.accepted' => 'Debes aceptar los términos y condiciones.',
         ]);
 
         $codigo = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
@@ -194,6 +222,12 @@ class AutenticacionController extends Controller
             $registro['intentos']++;
             Cache::put($key, $registro, now()->addMinutes(10));
             return response()->json(['result' => 'error', 'message' => 'el codigo es incorrecto'], 422);
+        }
+
+        if (!($registro['datos']['terminos_aceptados'] ?? false)) {
+            Cache::forget($key);
+
+            return response()->json(['result' => 'error', 'message' => 'Debes aceptar los términos y condiciones'], 422);
         }
 
         $user = usuario::create($registro['datos']);

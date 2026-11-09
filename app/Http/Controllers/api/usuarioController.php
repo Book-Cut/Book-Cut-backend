@@ -6,25 +6,40 @@ use App\Http\Controllers\Controller;
 use App\Models\usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class usuarioController extends Controller
 {
     public function barberos()
     {
+        Cache::forget('lista_barberos_catalogo');
+
         $barberos = usuario::query()
             ->where('Roles_IDRol', 2)
             ->orderBy('Nombre')
-            ->get(['idUsuario', 'Nombre', 'especialidad'])
+            ->get(['idUsuario', 'Nombre', 'especialidad', 'foto_perfil'])
             ->map(function ($barbero) {
                 $servicios = $barbero->especialidad()
                     ->pluck('Nombre')
                     ->implode(', ');
-                $barbero->especialidad = $servicios ?: $barbero->getOriginal('especialidad');
+                $especialidad = $servicios ?: $barbero->getOriginal('especialidad');
+                $foto = $barbero->foto_perfil;
+                if ($foto && !str_starts_with($foto, 'http')) {
+                    $foto = Storage::disk('public')->url($foto);
+                }
 
-                return $barbero;
-            });
+                return [
+                    'idUsuario' => $barbero->idUsuario,
+                    'Nombre' => $barbero->Nombre,
+                    'especialidad' => $especialidad,
+                    'foto_perfil' => $foto,
+                ];
+            })
+            ->values()
+            ->all();
 
         return response()->json(['data' => $barberos]);
     }
@@ -153,6 +168,10 @@ class usuarioController extends Controller
             $usuario->especialidades()->attach($request->servicios);
         }
 
+        if ($usuario->Roles_IDRol == 2) {
+            Cache::forget('lista_barberos_catalogo');
+        }
+
         return response()->json([
             'result' => 'ok',
             'data' => $usuario->load('especialidad'),
@@ -240,6 +259,8 @@ class usuarioController extends Controller
                 if ($horarios !== null) {
                     $usuario->horario()->sync($horarios);
                 }
+
+                Cache::forget('lista_barberos_catalogo');
             }
         });
 
@@ -255,6 +276,7 @@ class usuarioController extends Controller
         }
 
         $usuario->delete();
+        Cache::forget('lista_barberos_catalogo');
 
         return response()->json(['result' => 'ok', 'message' => 'Usuario eliminado correctamente']);
 

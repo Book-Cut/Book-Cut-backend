@@ -1,0 +1,138 @@
+<?php
+
+use App\Models\usuario;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
+
+beforeEach(function () {
+    Schema::dropIfExists('Usuario');
+    Schema::create('Usuario', function (Blueprint $table) {
+        $table->id('idUsuario');
+        $table->string('Nombre');
+        $table->string('correo')->unique();
+        $table->string('telefono');
+        $table->string('contrasenha');
+        $table->unsignedBigInteger('Roles_IDRol')->default(3);
+        $table->boolean('terminos_aceptados')->default(false);
+        $table->timestamps();
+    });
+
+    Schema::dropIfExists('personal_access_tokens');
+    Schema::create('personal_access_tokens', function (Blueprint $table) {
+        $table->id();
+        $table->morphs('tokenable');
+        $table->text('name');
+        $table->string('token', 64)->unique();
+        $table->text('abilities')->nullable();
+        $table->timestamp('last_used_at')->nullable();
+        $table->timestamp('expires_at')->nullable()->index();
+        $table->timestamps();
+    });
+});
+
+afterEach(function () {
+    Schema::dropIfExists('personal_access_tokens');
+    Schema::dropIfExists('Usuario');
+});
+
+test('permite registrar usuarios con un dominio permitido y acepta términos', function () {
+    $response = $this->postJson('/api/registro', [
+        'Nombre' => 'Mauricio',
+        'correo' => 'mauricio@gmail.com',
+        'telefono' => '3214567890',
+        'contrasenha' => 'claveSegura123',
+        'terminos_aceptados' => true,
+    ]);
+
+    $response->assertCreated()
+        ->assertJsonPath('result', 'ok')
+        ->assertJsonPath('user.correo', 'mauricio@gmail.com');
+
+    $this->assertDatabaseHas('Usuario', [
+        'correo' => 'mauricio@gmail.com',
+        'terminos_aceptados' => true,
+    ]);
+});
+
+test('rechaza correos con dominios no permitidos', function () {
+    $response = $this->postJson('/api/registro', [
+        'Nombre' => 'Mauricio',
+        'correo' => 'mauricio@yahoo.com',
+        'telefono' => '3214567890',
+        'contrasenha' => 'claveSegura123',
+        'terminos_aceptados' => true,
+    ]);
+
+    $response->assertUnprocessable()
+        ->assertJsonPath('errors.correo.0', 'Solo se permite correos de los siguientes dominios: @gmail.com, @hotmail.com, @outlook.com, @sena.edu.co.');
+});
+
+test('requiere aceptar los términos y condiciones', function () {
+    $response = $this->postJson('/api/registro', [
+        'Nombre' => 'Mauricio',
+        'correo' => 'mauricio@hotmail.com',
+        'telefono' => '3214567890',
+        'contrasenha' => 'claveSegura123',
+        'terminos_aceptados' => false,
+    ]);
+
+    $response->assertUnprocessable()
+        ->assertJsonPath('errors.terminos_aceptados.0', 'Debes aceptar los términos y condiciones.');
+});
+
+test('rechaza un código de inicio social vencido o inválido', function () {
+    $this->postJson('/api/auth/mobile/exchange', [
+        'code' => str_repeat('x', 64),
+    ])->assertUnauthorized()
+        ->assertJsonPath('message', 'El inicio de sesión expiró. Inténtalo de nuevo.');
+});
+
+test('canjea un código social de un solo uso por una sesión', function () {
+    $user = usuario::create([
+        'Nombre' => 'Andrés',
+        'correo' => 'andres@gmail.com',
+        'telefono' => '3001234567',
+        'contrasenha' => Hash::make('claveSegura123'),
+        'Roles_IDRol' => 3,
+        'terminos_aceptados' => true,
+    ]);
+    $code = str_repeat('a', 64);
+    Cache::put(
+        'social_login:'.hash('sha256', $code),
+        $user->getKey(),
+        now()->addMinute(),
+    );
+
+    $this->postJson('/api/auth/mobile/exchange', ['code' => $code])
+        ->assertOk()
+        ->assertJsonPath('result', 'ok')
+        ->assertJsonPath('user.correo', 'andres@gmail.com')
+        ->assertJsonStructure(['token']);
+
+    expect(Cache::has('social_login:'.hash('sha256', $code)))->toBeFalse();
+});
+
+test('prepara un registro social temporal con teléfono y términos aceptados', function () {
+    $response = $this->postJson('/api/auth/mobile/social/register', [
+        'telefono' => '3001234567',
+        'terminos_aceptados' => true,
+    ])->assertOk()
+        ->assertJsonPath('result', 'ok');
+
+    $registration = $response->json('registration');
+    expect($registration)->toBeString();
+    expect(Cache::get('social_registration:'.hash('sha256', $registration)))
+        ->toBe(['telefono' => '3001234567']);
+});
+
+test('devuelve al móvil si el proveedor social no está configurado', function () {
+    config([
+        'services.google.client_id' => null,
+        'services.google.client_secret' => null,
+    ]);
+
+    $this->get('/api/auth/google/redirect')
+        ->assertRedirect('bookcut://oauth/callback?error=provider_not_configured');
+});

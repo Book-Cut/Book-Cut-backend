@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Hash;
 
 class UsuarioSeeder extends Seeder
 {
-    /**
+    /**a
      * Run the database seeds.
      */
     public function run(): void
@@ -75,6 +75,7 @@ class UsuarioSeeder extends Seeder
                 'horario' => null,
                 'rol' => 'Cliente',
             ],
+            //*hola
         ];
 
         foreach ($usuarios as $usuario) {

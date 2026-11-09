@@ -24,10 +24,6 @@ Route::post('/auth/mobile/social/register', [SocialAuthController::class, 'start
     ->middleware('throttle:10,1');
 Route::post('/auth/mobile/exchange', [SocialAuthController::class, 'exchange'])
     ->middleware('throttle:10,1');
-Route::post('/auth/mobile/social/register', [SocialAuthController::class, 'startRegistration'])
-    ->middleware('throttle:10,1');
-Route::post('/auth/mobile/exchange', [SocialAuthController::class, 'exchange'])
-    ->middleware('throttle:10,1');
 
 Route::post('/registro/send-code', [AutenticacionController::class, 'sendRegisterCode']);
 Route::post('/registro/verify', [AutenticacionController::class, 'verifyRegisterCode']);

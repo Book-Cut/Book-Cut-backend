@@ -932,15 +932,8 @@ class GestionCitasController extends Controller
             if ((int) $cita->Usuario_idUsuarioCli !== (int) $user->idUsuario) {
                 return response()->json(['result' => 'error', 'message' => 'Sin autorización'], 403);
             }
-            $puedeCancelarDuranteConfirmacion = $cita->estado === 'Pendiente'
-                && $cita->confirmacion_solicitada_at
-                && $cita->confirmacion_solicitada_at->copy()->addMinutes(30)->gt(now())
-                && new DateTimeImmutable($cita->Fecha_hora) > new DateTimeImmutable;
-            if (
-                in_array($cita->estado, ['Cancelado', 'Finalizado'], true)
-                || (!$this->estaDentroDelPlazoMinimo($cita) && !$puedeCancelarDuranteConfirmacion)
-            ) {
-                return response()->json(['result' => 'error', 'message' => 'Solo puedes cancelar la cita hasta dos horas antes de su inicio.'], 422);
+            if (in_array($cita->estado, ['Cancelado', 'Finalizado'], true)) {
+                return response()->json(['result' => 'error', 'message' => 'Esta cita ya no se puede cancelar.'], 422);
             }
         } elseif ($cita->Usuario_idUsuarioCli && in_array($cita->estado, ['Pendiente', 'Confirmado'], true)) {
             
