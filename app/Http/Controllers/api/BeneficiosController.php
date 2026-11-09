@@ -167,8 +167,8 @@ class BeneficiosController extends Controller
         $data = Cache::remember($cacheKey, 1800, function () use ($hoy) {
             return beneficios::where('Fecha_inicio', '<=', $hoy)
                 ->where('Fecha_fin', '>=', $hoy)
-                ->whereNotNull('imagen')
-                ->get();
+                ->get()
+                ->toArray();
         });
 
         return response()->json(['result' => 'ok', 'data' => $data]);

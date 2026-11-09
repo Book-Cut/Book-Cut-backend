@@ -24,18 +24,14 @@ class FacturaController extends Controller
             return response()->json(['result' => 'error', 'message' => 'Rol no definido'], 403);
         }
 
-        /*$query = Factura::with([
+        $query = Factura::with([
             'cita.cliente:idUsuario,Nombre,correo',
             'cita.barbero:idUsuario,Nombre',
             'cita.servicios:idServicio,Nombre,Precio,Duracion',
             'citas.cliente:idUsuario,Nombre,correo',
             'citas.barbero:idUsuario,Nombre',
             'citas.servicios:idServicio,Nombre,Precio,Duracion',
-        ]);*/
-
-        $facturas = Factura::all();
-
-        return response()->json($facturas, 200);
+        ])->orderByDesc('idfactura');
 
         if ($user->roles->Nombre_rol === 'Administrador') {
             return response()->json($query->get(), 200);
@@ -179,8 +175,9 @@ class FacturaController extends Controller
     {
         $factura = Factura::with([
             'usuario:idUsuario,Nombre,correo',
-            'cita.servicios',
+            'cita.cliente:idUsuario,Nombre,correo',
             'cita.barbero:idUsuario,Nombre',
+            'cita.servicios',
             'citas.cliente:idUsuario,Nombre,correo',
             'citas.barbero:idUsuario,Nombre',
             'citas.servicios',

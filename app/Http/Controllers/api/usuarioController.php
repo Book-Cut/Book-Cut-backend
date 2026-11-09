@@ -24,14 +24,21 @@ class usuarioController extends Controller
                     $servicios = $barbero->especialidad()
                         ->pluck('Nombre')
                         ->implode(', ');
-                    $barbero->especialidad = $servicios ?: $barbero->getOriginal('especialidad');
+                    $especialidad = $servicios ?: $barbero->getOriginal('especialidad');
                     $foto = $barbero->foto_perfil;
                     if ($foto && !str_starts_with($foto, 'http')) {
-                        $barbero->foto_perfil = Storage::disk('public')->url($foto);
+                        $foto = Storage::disk('public')->url($foto);
                     }
 
-                    return $barbero;
-                });
+                    return [
+                        'idUsuario' => $barbero->idUsuario,
+                        'Nombre' => $barbero->Nombre,
+                        'especialidad' => $especialidad,
+                        'foto_perfil' => $foto,
+                    ];
+                })
+                ->values()
+                ->all();
         });
 
         return response()->json(['data' => $barberos]);
