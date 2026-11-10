@@ -83,8 +83,6 @@ class ValoraController extends Controller
             ->leftJoin('cita as c', 'c.Valora_Idvalora', '=', 'v.Idvalora')
             ->leftJoin('Usuario as cli', 'cli.idUsuario', '=', 'c.Usuario_idUsuarioCli')
             ->leftJoin('Usuario as bar', 'bar.idUsuario', '=', 'c.Usuario_idUsuarioBar')
-            ->leftJoin('Usuario as cli', 'cli.idUsuario', '=', 'c.Usuario_idUsuarioCli')
-            ->leftJoin('Usuario as bar', 'bar.idUsuario', '=', 'c.Usuario_idUsuarioBar')
             ->leftJoin('cita_servicio as cs', 'cs.idCita', '=', 'c.idCita')
             ->leftJoin('servicio as s', 's.idServicio', '=', 'cs.idServicio')
             ->select([
@@ -97,10 +95,6 @@ class ValoraController extends Controller
                 'cli.Nombre as Cliente',
                 'bar.Nombre as Barbero',
                 DB::raw("GROUP_CONCAT(DISTINCT s.Nombre SEPARATOR ', ') as Servicios"),
-                DB::raw('c."Fecha_hora" as "Fecha_hora"'),
-                DB::raw('cli."Nombre" as "Cliente"'),
-                DB::raw('bar."Nombre" as "Barbero"'),
-                DB::raw('STRING_AGG(DISTINCT s."Nombre", \', \') as "Servicios"'),
             ])
             ->where(function($query) {
                 $query->where('c.Usuario_idUsuarioBar', 2)

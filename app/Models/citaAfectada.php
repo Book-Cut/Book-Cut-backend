@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Mail;
 
 class citaAfectada extends Model
 {
@@ -13,8 +14,7 @@ class citaAfectada extends Model
 
     public function indisponibilidad()
     {
-        return $this->belongsTo(Indisponibilidad::class, 'Indisponibilidad_id', 'idIndisponibilidad');
-    
+        return $this->belongsTo(indisponibilidad::class, 'Indisponibilidad_id', 'idIndisponibilidad');
     }
 
     //marca la cita como afectada
@@ -29,11 +29,11 @@ class citaAfectada extends Model
             'Usuario_idUsuario' => $cita->Usuario_idUsuarioCli,
             'CitaAfectada_id' => $afectada->idCitaAfectada,
             'titulo' => 'Tu cita fue afectada',
-            'mensaje' => "Tu cital del {$cita->Fecha_hora} no podra realizarse. Reagendala o cancelala en Mis Citas.",
+            'mensaje' => "Tu cita del {$cita->Fecha_hora} no podrá realizarse. Reagéndala o cancélala en Mis citas.",
         ]);
 
         try {
-            Mail:send('correos.cita_afectada', [
+            Mail::send('correos.cita-afectada', [
                 'nombreCliente' => $cita->cliente->Nombre,
                 'fecha' => substr($cita->Fecha_hora, 0, 10),
                 'hora' => substr($cita->Fecha_hora, 11, 5),
@@ -43,7 +43,7 @@ class citaAfectada extends Model
 
             return true;
         } catch (\Throwable $e) {
-            report ($e);
+            report($e);
 
             return false;
         }

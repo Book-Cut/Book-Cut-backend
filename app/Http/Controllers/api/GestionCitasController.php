@@ -960,6 +960,12 @@ class GestionCitasController extends Controller
             ]);
         }
 
+         if (!$esCliente && $cita->Usuario_idUsuarioCli && in_array($cita->estado, ['Pendiente', 'Confirmado'], true)) {
+            return $this->avisarCancelacionBarbero($cita, $user, $motivo);
+            }
+
+        
+
         // Cliente, o cita sin cliente registrado: se cancela directo
         $cita->estado = 'Cancelado';
         $cita->confirmacion_solicitada_at = null;
@@ -974,6 +980,55 @@ class GestionCitasController extends Controller
 
         return response()->json(['result' => 'ok', 'message' => 'cita eliminada']);
     }
+
+    private function avisarCancelacionBarbero(Citas $cita, $user, ?string $motivo)
+{
+    if ($this->citaAfectadaPendiente($cita)) {
+        return response()->json(['result' => 'error', 'message' => 'Esta cita ya espera la respuesta del cliente.'], 422);
+    }
+
+    $cita->load(['cliente', 'barbero', 'servicios']);
+    $inicio = $this->inicioCita($cita);
+    $fin = $this->finCita($cita);
+    $mensaje = "Tu cita del {$inicio->format('Y-m-d H:i')} con {$cita->barbero->Nombre} no podrá realizarse."
+        . ($motivo ? " Motivo: $motivo." : '')
+        . ' Entra a Mis citas para reagendarla o cancelarla.';
+
+    DB::transaction(function () use ($cita, $user, $motivo, $inicio, $fin, $mensaje) {
+        $bloqueo = indisponibilidad::create([
+            'Usuario_idUsuarioBar' => $cita->Usuario_idUsuarioBar,
+            'fecha' => $inicio->format('Y-m-d'),
+            'hora_inicio' => $inicio->format('H:i:s'),
+            'hora_fin' => $fin->format('H:i:s'),
+            'motivo' => $motivo,
+            'Usuario_idUsuarioReg' => $user->idUsuario,
+        ]);
+        $afectada = citaAfectada::create([
+            'Cita_idCita' => $cita->idCita,
+            'Indisponibilidad_id' => $bloqueo->idIndisponibilidad,
+        ]);
+        notificacionWeb::create([
+            'Usuario_idUsuario' => $cita->Usuario_idUsuarioCli,
+            'CitaAfectada_id' => $afectada->idCitaAfectada,
+            'titulo' => 'Tu cita fue afectada',
+            'mensaje' => $mensaje,
+        ]);
+    });
+
+    $enlace = rtrim(explode('#', config('app.frontend_url'))[0], '/') . '/#/mis-citas';
+    $correoEnviado = false;
+    try {
+        Mail::raw(
+            "Hola {$cita->cliente->Nombre},\n\n$mensaje\n\nReagenda o cancela aquí: $enlace",
+            fn ($m) => $m->to($cita->cliente->correo)->subject('Tu cita en Book&Cut fue afectada'),
+        );
+        $correoEnviado = true;
+    } catch (\Throwable $e) {
+        report($e);
+    }
+
+    return response()->json(['result' => 'ok', 'message' => 'Cliente avisado', 'afectada' => true, 'correo_enviado' => $correoEnviado]);
+}
 
     private function estaDentroDelPlazoMinimo(Citas $cita): bool
     {
