@@ -2,6 +2,7 @@
 
 use App\Models\usuario;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
@@ -30,9 +31,20 @@ beforeEach(function () {
         $table->timestamp('expires_at')->nullable()->index();
         $table->timestamps();
     });
+
+    Schema::dropIfExists('auth_temporary_tokens');
+    Schema::create('auth_temporary_tokens', function (Blueprint $table) {
+        $table->string('token_hash', 64)->primary();
+        $table->string('purpose', 32);
+        $table->json('payload');
+        $table->unsignedTinyInteger('attempts')->default(0);
+        $table->timestamp('expires_at')->index();
+        $table->timestamps();
+    });
 });
 
 afterEach(function () {
+    Schema::dropIfExists('auth_temporary_tokens');
     Schema::dropIfExists('personal_access_tokens');
     Schema::dropIfExists('Usuario');
 });
@@ -80,6 +92,47 @@ test('requiere aceptar los términos y condiciones', function () {
 
     $response->assertUnprocessable()
         ->assertJsonPath('errors.terminos_aceptados.0', 'Debes aceptar los términos y condiciones.');
+});
+
+test('registra la cuenta y consume el código de verificación de un solo uso', function () {
+    $correo = 'registro@gmail.com';
+    $tokenHash = hash('sha256', 'registro:'.$correo);
+
+    DB::table('auth_temporary_tokens')->insert([
+        'token_hash' => $tokenHash,
+        'purpose' => 'registro',
+        'payload' => json_encode([
+            'codigo' => Hash::make('123456'),
+            'datos' => [
+                'Nombre' => 'Mauricio',
+                'correo' => $correo,
+                'telefono' => '3214567890',
+                'contrasenha' => Hash::make('claveSegura123'),
+                'Roles_IDRol' => 3,
+                'terminos_aceptados' => true,
+            ],
+        ], JSON_THROW_ON_ERROR),
+        'attempts' => 0,
+        'expires_at' => now()->addMinutes(10),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $this->postJson('/api/registro/verify', [
+        'correo' => $correo,
+        'codigo' => '123456',
+    ])->assertCreated()
+        ->assertJsonPath('result', 'ok')
+        ->assertJsonPath('user.correo', $correo);
+
+    $this->assertDatabaseHas('Usuario', ['correo' => $correo]);
+    $this->assertDatabaseMissing('auth_temporary_tokens', ['token_hash' => $tokenHash]);
+
+    $this->postJson('/api/registro/verify', [
+        'correo' => $correo,
+        'codigo' => '123456',
+    ])->assertUnprocessable()
+        ->assertJsonPath('message', 'el codigo expiro, solicite uno nuevo');
 });
 
 test('rechaza un código de inicio social vencido o inválido', function () {

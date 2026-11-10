@@ -15,7 +15,6 @@ use App\Http\Controllers\api\usuarioController;
 use App\Http\Controllers\api\ValoraController;
 use App\Http\Controllers\SocialAuthController;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AutenticacionController::class, 'login']);
@@ -47,20 +46,21 @@ Route::post('/cita-afectada/{id}/reagendar', [CitaAfectadaController::class, 're
 Route::get('/cita-afectada/{id}/barberos-alternativos', [CitaAfectadaController::class, 'barberosAlternativos']);
 Route::post('/cita-afectada/{id}/otro-barbero', [CitaAfectadaController::class, 'otroBarbero']);
 
-// Endpoint seguro para invocar el procesamiento de confirmaciones vía Webhook/Cron externo o mantenimiento
-Route::get('/cron/procesar-confirmaciones', function (\Illuminate\Http\Request $request) {
+// Endpoint seguro para invocar el procesamiento de confirmaciones vía Webhook/Cron externo
+Route::get('/cron/procesar-confirmaciones', function (Illuminate\Http\Request $request) {
     $token = $request->query('token');
     $tokenEsperado = config('app.cron_token', env('CRON_TOKEN', 'bookcut_cron_secret_2026'));
     if ($token !== $tokenEsperado) {
         return response()->json(['error' => 'No autorizado'], 403);
     }
     Artisan::call('citas:procesar-confirmaciones');
-        return response()->json([
-            'status' => 'success',
-            'mensaje' => 'Confirmaciones procesadas correctamente',
-            'ejecutado_at' => now()->toDateTimeString(),
-        ]);
-    });
+
+    return response()->json([
+        'status' => 'success',
+        'mensaje' => 'Confirmaciones procesadas correctamente',
+        'ejecutado_at' => now()->toDateTimeString(),
+    ]);
+});
 
 Route::middleware('auth:sanctum')->group(function () {
 

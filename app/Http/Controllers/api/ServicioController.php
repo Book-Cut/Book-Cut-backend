@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Citas;
 use App\Models\Servicio;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
@@ -32,10 +32,10 @@ class ServicioController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->roles || $user->roles->Nombre_rol !== 'Administrador') {
+        if (! $user || ! $user->roles || $user->roles->Nombre_rol !== 'Administrador') {
             return response()->json([
                 'result' => 'error',
-                'message' => 'No tienes permisos para crear servicios.'
+                'message' => 'No tienes permisos para crear servicios.',
             ], 403);
         }
 
@@ -60,15 +60,14 @@ class ServicioController extends Controller
             return response()->json([
                 'result' => 'error',
                 'message' => $validator->errors()->first(),
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
-
         $servicio = Servicio::create($validator->validated());
         return response()->json([
             'result' => 'ok',
             'message' => 'Servicio creado correctamente',
-            'data' => $servicio
+            'data' => $servicio,
         ], 201);
     }
 
@@ -82,14 +81,15 @@ class ServicioController extends Controller
         if ($user->roles->Nombre_rol !== 'Administrador') {
             return response()->json([
                 'result' => 'error',
-                'message' => 'No tienes permisos para ver servicios.'
+                'message' => 'No tienes permisos para ver servicios.',
             ], 403);
         }
 
         $servicio = Servicio::find($id);
-        if (!$servicio) {
+        if (! $servicio) {
             return response()->json(['result' => 'error', 'message' => 'Servicio not found'], 404);
         }
+
         return response()->json(['result' => 'ok', 'data' => $servicio]);
     }
 
@@ -103,12 +103,12 @@ class ServicioController extends Controller
         if ($user->roles->Nombre_rol !== 'Administrador') {
             return response()->json([
                 'result' => 'error',
-                'message' => 'No tienes permisos para actualizar servicios.'
+                'message' => 'No tienes permisos para actualizar servicios.',
             ], 403);
         }
 
         $servicio = Servicio::find($id);
-        if (!$servicio) {
+        if (! $servicio) {
             return response()->json(['result' => 'error', 'message' => 'Servicio not found'], 404);
         }
         $servicio->update($request->all());
@@ -127,11 +127,11 @@ class ServicioController extends Controller
         if ($user->roles->Nombre_rol !== 'Administrador') {
             return response()->json([
                 'result' => 'error',
-                'message' => 'No tienes permisos para eliminar servicios.'
+                'message' => 'No tienes permisos para eliminar servicios.',
             ], 403);
         }
 
-        if (!$servicio) {
+        if (! $servicio) {
             return response()->json(['result' => 'error', 'message' => 'Servicio not found'], 404);
         }
 
@@ -145,9 +145,8 @@ class ServicioController extends Controller
                 409
             );
         }
-
         $servicio->delete();
-
+        $servicio->delete();
 
         return response()->json(['result' => 'ok', 'message' => 'Servicio deleted']);
     }

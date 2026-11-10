@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -25,7 +24,7 @@ class usuarioController extends Controller
                     ->implode(', ');
                 $especialidad = $servicios ?: $barbero->getOriginal('especialidad');
                 $foto = $barbero->foto_perfil;
-                if ($foto && !str_starts_with($foto, 'http')) {
+                if ($foto && ! str_starts_with($foto, 'http')) {
                     $foto = Storage::disk('public')->url($foto);
                 }
 
@@ -90,7 +89,7 @@ class usuarioController extends Controller
 
     public function store(Request $request)
     {
-        if (!Auth::guard('sanctum')->check()) {
+        if (! Auth::guard('sanctum')->check()) {
             return response()->json([
                 'result' => 'error',
                 'message' => 'No tienes permisos para crear usuarios con este rol. Solo administradores.',
@@ -253,6 +252,7 @@ class usuarioController extends Controller
                 if ($horarios !== null) {
                     $usuario->horario()->sync($horarios);
                 }
+
             }
         });
 

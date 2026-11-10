@@ -7,6 +7,7 @@ use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -233,6 +234,11 @@ class SocialAuthController extends Controller
             'result' => 'ok',
             'registration' => $registrationId,
         ]);
+    }
+
+    private function temporaryTokenHash(string $purpose, string $token): string
+    {
+        return hash('sha256', $purpose.':'.$token);
     }
 
     private function emailDomainAllowed(string $email): bool

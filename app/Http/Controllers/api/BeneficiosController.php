@@ -3,13 +3,11 @@
 namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\beneficios;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-
-
 
 class BeneficiosController extends Controller
 {
@@ -20,6 +18,7 @@ class BeneficiosController extends Controller
     {
         //
         $beneficios = beneficios::all();
+
         return response()->json(['result' => 'ok', 'message' => 'Beneficios obtenidos exitosamente', 'data' => $beneficios]);
     }
 
@@ -30,14 +29,14 @@ class BeneficiosController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->roles) {
+        if (! $user || ! $user->roles) {
             return response()->json(['result' => 'error', 'message' => 'Rol no definido'], 403);
         }
 
         if ($user->roles->Nombre_rol !== 'Administrador') {
             return response()->json([
                 'result' => 'error',
-                'message' => 'No tienes permisos para crear beneficios.'
+                'message' => 'No tienes permisos para crear beneficios.',
             ], 403);
         }
 
@@ -88,14 +87,14 @@ class BeneficiosController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->roles) {
+        if (! $user || ! $user->roles) {
             return response()->json(['result' => 'error', 'message' => 'Rol no definido'], 403);
         }
 
         if ($user->roles->Nombre_rol !== 'Administrador') {
             return response()->json([
                 'result' => 'error',
-                'message' => 'No tienes permisos para actualizar beneficios.'
+                'message' => 'No tienes permisos para actualizar beneficios.',
             ], 403);
         }
 
@@ -118,7 +117,7 @@ class BeneficiosController extends Controller
                 }
                 $data['imagen'] = $imagen;
             }
-
+            $beneficios->update($data);
             $beneficios->update($data);
 
             return response()->json(['result' => 'ok', 'message' => 'Beneficio actualizado correctamente', 'beneficios' => $beneficios]);
@@ -127,7 +126,6 @@ class BeneficiosController extends Controller
         }
     }
 
-
     /**
      * Remove the specified resource from storage.
      */
@@ -135,20 +133,21 @@ class BeneficiosController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user || !$user->roles) {
+        if (! $user || ! $user->roles) {
             return response()->json(['result' => 'error', 'message' => 'Rol no definido'], 403);
         }
 
         if ($user->roles->Nombre_rol !== 'Administrador') {
             return response()->json([
                 'result' => 'error',
-                'message' => 'No tienes permisos para eliminar beneficios.'
+                'message' => 'No tienes permisos para eliminar beneficios.',
             ], 403);
         }
 
         $beneficios = beneficios::find($id);
         if ($beneficios) {
             $beneficios->delete();
+
             return response()->json(['result' => 'ok', 'message' => 'Beneficio eliminado correctamente']);
         } else {
             return response()->json(['result' => 'error', 'message' => 'Beneficio no encontrado'], 404);

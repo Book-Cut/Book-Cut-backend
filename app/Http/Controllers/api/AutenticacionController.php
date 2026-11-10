@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\usuario;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
-
 
 class AutenticacionController extends Controller
 {
@@ -61,7 +61,7 @@ class AutenticacionController extends Controller
             'result' => 'ok',
             'message' => 'Usuario registrado exitosamente',
             'user' => $user,
-            'token' => $token
+            'token' => $token,
         ], 201);
     }
 
@@ -75,7 +75,7 @@ class AutenticacionController extends Controller
 
         $user = usuario::where('correo', $request->correo)->first();
 
-        //hola $users = usuario::all();
+        // hola $users = usuario::all();
 
         /*return response()->json([
             'result' => 'ok',
@@ -83,11 +83,11 @@ class AutenticacionController extends Controller
             'user' => $users
         ], 200);*/
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['result' => 'error', 'message' => 'Credenciales inválidas'], 401);
         }
 
-        if ($request->contrasenha !== $user->contrasenha && !Hash::check($request->contrasenha, $user->contrasenha)) {
+        if ($request->contrasenha !== $user->contrasenha && ! Hash::check($request->contrasenha, $user->contrasenha)) {
             return response()->json(['result' => 'error', 'message' => 'Credenciales inválidas'], 401);
         }
 
@@ -101,7 +101,7 @@ class AutenticacionController extends Controller
             'result' => 'ok',
             'message' => 'Usuario autenticado exitosamente',
             'user' => $user,
-            'token' => $token
+            'token' => $token,
         ], 200);
     }
 
@@ -126,7 +126,7 @@ class AutenticacionController extends Controller
                 ['token' => Hash::make($token), 'created_at' => now()]
             );
 
-            $url = rtrim(config('app.frontend_url'), '/') . '/restablecer?token=' . $token . '&correo=' . urlencode($user->correo);
+            $url = rtrim(config('app.frontend_url'), '/').'/restablecer?token='.$token.'&correo='.urlencode($user->correo);
 
             Mail::raw("Hola {$user->Nombre},\n\nRestablece tu contraseña aquí (válido 60 min):\n$url\n\nSi no fuiste tú, ignora este correo.", function ($m) use ($user) {
                 $m->to($user->correo)->subject('Restablecer contraseña - Book&Cut');
@@ -151,9 +151,9 @@ class AutenticacionController extends Controller
         $row = DB::table('password_reset_tokens')->where('email', $request->correo)->first();
 
         if (
-            !$row
-            || !Hash::check($request->token, $row->token)
-            || now()->greaterThan(\Illuminate\Support\Carbon::parse($row->created_at)->addMinutes(60))
+            ! $row
+            || ! Hash::check($request->token, $row->token)
+            || now()->greaterThan(Carbon::parse($row->created_at)->addMinutes(60))
         ) {
             return response()->json(['result' => 'error', 'message' => 'Enlace invalido o ya expiro'], 422);
         }
@@ -163,6 +163,7 @@ class AutenticacionController extends Controller
         $user->save();
 
         DB::table('password_reset_tokens')->where('email', $request->correo)->delete();
+
         return response()->json(['result' => 'ok', 'message' => 'Contraseña restablecida exitosamente'], 200);
     }
 
@@ -218,7 +219,7 @@ class AutenticacionController extends Controller
     {
         $request->validate(['correo' => 'required|email', 'codigo' => 'required|digits:6']);
 
-         $tokenHash = hash('sha256', 'registro:'.$request->correo);
+        $tokenHash = hash('sha256', 'registro:'.$request->correo);
         $verification = DB::transaction(function () use ($request, $tokenHash): array {
             $record = DB::table('auth_temporary_tokens')
                 ->where('token_hash', $tokenHash)
