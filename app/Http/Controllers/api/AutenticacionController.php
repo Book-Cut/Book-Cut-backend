@@ -8,7 +8,6 @@ use App\Models\usuario;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 
@@ -182,18 +181,31 @@ class AutenticacionController extends Controller
 
         $codigo = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
-        Cache::put('registro:' . $request->correo, [
-            'codigo' => Hash::make($codigo),
-            'intentos' => 0,
-            'datos' => [
-                'Nombre' => $request->Nombre,
-                'correo' => $request->correo,
-                'telefono' => $request->telefono,
-                'contrasenha' => Hash::make($request->contrasenha),
-                'Roles_IDRol' => 3,
-                'terminos_aceptados' => $request->boolean('terminos_aceptados'),
+        $now = now();
+        $tokenHash = hash('sha256', 'registro:'.$request->correo);
+
+        DB::table('auth_temporary_tokens')->where('expires_at', '<=', $now)->delete();
+        DB::table('auth_temporary_tokens')->updateOrInsert(
+            ['token_hash' => $tokenHash],
+            [
+                'purpose' => 'registro',
+                'payload' => json_encode([
+                    'codigo' => Hash::make($codigo),
+                    'datos' => [
+                        'Nombre' => $request->Nombre,
+                        'correo' => $request->correo,
+                        'telefono' => $request->telefono,
+                        'contrasenha' => Hash::make($request->contrasenha),
+                        'Roles_IDRol' => 3,
+                        'terminos_aceptados' => $request->boolean('terminos_aceptados'),
+                    ],
+                ], JSON_THROW_ON_ERROR),
+                'attempts' => 0,
+                'expires_at' => $now->copy()->addMinutes(10),
+                'created_at' => $now,
+                'updated_at' => $now,
             ],
-        ], now()->addMinutes(10));
+        );
 
         Mail::send('correos.codigo-verificacion', ['codigo' => $codigo], function ($mensaje) use ($request) {
             $mensaje->to($request->correo)->subject('Verifica tu cuenta - Book&Cut');
@@ -206,32 +218,67 @@ class AutenticacionController extends Controller
     {
         $request->validate(['correo' => 'required|email', 'codigo' => 'required|digits:6']);
 
-        $key = 'registro:' . $request->correo;
-        $registro = Cache::get($key);
+         $tokenHash = hash('sha256', 'registro:'.$request->correo);
+        $verification = DB::transaction(function () use ($request, $tokenHash): array {
+            $record = DB::table('auth_temporary_tokens')
+                ->where('token_hash', $tokenHash)
+                ->where('purpose', 'registro')
+                ->where('expires_at', '>', now())
+                ->lockForUpdate()
+                ->first();
 
-        if (!$registro) {
+            if (! $record) {
+                return ['status' => 'expired'];
+            }
+
+            if ($record->attempts >= 5) {
+                DB::table('auth_temporary_tokens')->where('token_hash', $tokenHash)->delete();
+
+                return ['status' => 'locked'];
+            }
+
+            $registration = json_decode($record->payload, true, 512, JSON_THROW_ON_ERROR);
+
+            if (! Hash::check($request->codigo, $registration['codigo'])) {
+                DB::table('auth_temporary_tokens')
+                    ->where('token_hash', $tokenHash)
+                    ->update([
+                        'attempts' => $record->attempts + 1,
+                        'updated_at' => now(),
+                    ]);
+
+                return ['status' => 'invalid'];
+            }
+
+            if (! ($registration['datos']['terminos_aceptados'] ?? false)) {
+                DB::table('auth_temporary_tokens')->where('token_hash', $tokenHash)->delete();
+
+                return ['status' => 'terms_not_accepted'];
+            }
+
+            $user = usuario::create($registration['datos']);
+            DB::table('auth_temporary_tokens')->where('token_hash', $tokenHash)->delete();
+
+            return ['status' => 'verified', 'user' => $user];
+        });
+
+        if ($verification['status'] === 'expired') {
             return response()->json(['result' => 'error', 'message' => 'el codigo expiro, solicite uno nuevo'], 422);
         }
 
-        if ($registro['intentos'] >= 5) {
-            Cache::forget($key);
+        if ($verification['status'] === 'locked') {
             return response()->json(['result' => 'error', 'message' => 'muchos intentos, solicita otro codigo'], 429);
         }
 
-        if (!Hash::check($request->codigo, $registro['codigo'])) {
-            $registro['intentos']++;
-            Cache::put($key, $registro, now()->addMinutes(10));
+        if ($verification['status'] === 'invalid') {
             return response()->json(['result' => 'error', 'message' => 'el codigo es incorrecto'], 422);
         }
 
-        if (!($registro['datos']['terminos_aceptados'] ?? false)) {
-            Cache::forget($key);
-
+        if ($verification['status'] === 'terms_not_accepted') {
             return response()->json(['result' => 'error', 'message' => 'Debes aceptar los términos y condiciones'], 422);
         }
 
-        $user = usuario::create($registro['datos']);
-        Cache::forget($key);
+        $user = $verification['user'];
 
         return response()->json([
             'result' => 'ok',

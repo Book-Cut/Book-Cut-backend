@@ -2,7 +2,6 @@
 
 use App\Models\usuario;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 
@@ -99,11 +98,16 @@ test('canjea un código social de un solo uso por una sesión', function () {
         'terminos_aceptados' => true,
     ]);
     $code = str_repeat('a', 64);
-    Cache::put(
-        'social_login:'.hash('sha256', $code),
-        $user->getKey(),
-        now()->addMinute(),
-    );
+    $tokenHash = hash('sha256', 'social_login:'.$code);
+    DB::table('auth_temporary_tokens')->insert([
+        'token_hash' => $tokenHash,
+        'purpose' => 'social_login',
+        'payload' => json_encode(['user_id' => $user->getKey()], JSON_THROW_ON_ERROR),
+        'attempts' => 0,
+        'expires_at' => now()->addMinute(),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
 
     $this->postJson('/api/auth/mobile/exchange', ['code' => $code])
         ->assertOk()
@@ -111,7 +115,7 @@ test('canjea un código social de un solo uso por una sesión', function () {
         ->assertJsonPath('user.correo', 'andres@gmail.com')
         ->assertJsonStructure(['token']);
 
-    expect(Cache::has('social_login:'.hash('sha256', $code)))->toBeFalse();
+    $this->assertDatabaseMissing('auth_temporary_tokens', ['token_hash' => $tokenHash]);
 });
 
 test('prepara un registro social temporal con teléfono y términos aceptados', function () {
@@ -123,8 +127,11 @@ test('prepara un registro social temporal con teléfono y términos aceptados', 
 
     $registration = $response->json('registration');
     expect($registration)->toBeString();
-    expect(Cache::get('social_registration:'.hash('sha256', $registration)))
-        ->toBe(['telefono' => '3001234567']);
+    $this->assertDatabaseHas('auth_temporary_tokens', [
+        'token_hash' => hash('sha256', 'social_registration:'.$registration),
+        'purpose' => 'social_registration',
+        'payload' => json_encode(['telefono' => '3001234567'], JSON_THROW_ON_ERROR),
+    ]);
 });
 
 test('devuelve al móvil si el proveedor social no está configurado', function () {

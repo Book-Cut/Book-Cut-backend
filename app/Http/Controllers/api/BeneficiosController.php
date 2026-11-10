@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\beneficios;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
@@ -60,7 +59,6 @@ class BeneficiosController extends Controller
             $data['imagen'] = $imagen;
         }
         $beneficios = beneficios::create($data);
-        Cache::forget('beneficios_vigentes_' . now()->toDateString());
 
         return response()->json([
             'result' => 'ok',
@@ -122,14 +120,13 @@ class BeneficiosController extends Controller
             }
 
             $beneficios->update($data);
-            Cache::forget('beneficios_vigentes_' . now()->toDateString());
 
             return response()->json(['result' => 'ok', 'message' => 'Beneficio actualizado correctamente', 'beneficios' => $beneficios]);
         } else {
             return response()->json(['result' => 'error', 'message' => 'Beneficio no encontrado'], 404);
         }
     }
-    
+
 
     /**
      * Remove the specified resource from storage.
@@ -152,7 +149,6 @@ class BeneficiosController extends Controller
         $beneficios = beneficios::find($id);
         if ($beneficios) {
             $beneficios->delete();
-            Cache::forget('beneficios_vigentes_' . now()->toDateString());
             return response()->json(['result' => 'ok', 'message' => 'Beneficio eliminado correctamente']);
         } else {
             return response()->json(['result' => 'error', 'message' => 'Beneficio no encontrado'], 404);
@@ -162,7 +158,6 @@ class BeneficiosController extends Controller
     public function vigentes()
     {
         $hoy = now()->toDateString();
-        Cache::forget('beneficios_vigentes_' . $hoy);
 
         $data = beneficios::where('Fecha_inicio', '<=', $hoy)
             ->where('Fecha_fin', '>=', $hoy)

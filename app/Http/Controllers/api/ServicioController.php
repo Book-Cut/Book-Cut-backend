@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use App\Models\Citas;
 use App\Models\Servicio;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
 
 class ServicioController extends Controller
@@ -17,7 +16,6 @@ class ServicioController extends Controller
      */
     public function index()
     {
-        Cache::forget('catalogo_servicios');
         $servicios = Servicio::all();
 
         return response()->json([
@@ -67,8 +65,6 @@ class ServicioController extends Controller
         }
 
         $servicio = Servicio::create($validator->validated());
-        Cache::forget('catalogo_servicios');
-
         return response()->json([
             'result' => 'ok',
             'message' => 'Servicio creado correctamente',
@@ -116,7 +112,7 @@ class ServicioController extends Controller
             return response()->json(['result' => 'error', 'message' => 'Servicio not found'], 404);
         }
         $servicio->update($request->all());
-        Cache::forget('catalogo_servicios');
+
         return response()->json(['result' => 'ok', 'message' => 'Servicio actualizado correctamente', 'data' => $servicio]);
     }
 
@@ -151,7 +147,7 @@ class ServicioController extends Controller
         }
 
         $servicio->delete();
-        Cache::forget('catalogo_servicios');
+
 
         return response()->json(['result' => 'ok', 'message' => 'Servicio deleted']);
     }

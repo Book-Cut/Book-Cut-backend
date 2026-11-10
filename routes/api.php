@@ -54,24 +54,13 @@ Route::get('/cron/procesar-confirmaciones', function (\Illuminate\Http\Request $
     if ($token !== $tokenEsperado) {
         return response()->json(['error' => 'No autorizado'], 403);
     }
-    if ($request->query('action') === 'cache-clear') {
-        \Illuminate\Support\Facades\Cache::flush();
-        \Illuminate\Support\Facades\Artisan::call('cache:clear');
-        \Illuminate\Support\Facades\Artisan::call('config:clear');
-        \Illuminate\Support\Facades\Artisan::call('route:clear');
+    Artisan::call('citas:procesar-confirmaciones');
         return response()->json([
             'status' => 'success',
-            'mensaje' => 'Cache y configuracion limpiados exitosamente',
+            'mensaje' => 'Confirmaciones procesadas correctamente',
             'ejecutado_at' => now()->toDateTimeString(),
         ]);
-    }
-    Artisan::call('citas:procesar-confirmaciones');
-    return response()->json([
-        'status' => 'success',
-        'mensaje' => 'Confirmaciones procesadas correctamente',
-        'ejecutado_at' => now()->toDateTimeString(),
-    ]);
-});
+    });
 
 Route::middleware('auth:sanctum')->group(function () {
 
@@ -115,5 +104,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:1')->put('/facturas/{id}', [FacturaController::class, 'update']);
     Route::middleware('role:1')->delete('/facturas/{id}', [FacturaController::class, 'destroy']);
 
-   
+
 });
