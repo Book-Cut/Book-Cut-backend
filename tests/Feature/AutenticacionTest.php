@@ -2,7 +2,7 @@
 
 use App\Models\usuario;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 
@@ -30,9 +30,20 @@ beforeEach(function () {
         $table->timestamp('expires_at')->nullable()->index();
         $table->timestamps();
     });
+
+    Schema::dropIfExists('auth_temporary_tokens');
+    Schema::create('auth_temporary_tokens', function (Blueprint $table) {
+        $table->string('token_hash', 64)->primary();
+        $table->string('purpose', 32);
+        $table->json('payload');
+        $table->unsignedTinyInteger('attempts')->default(0);
+        $table->timestamp('expires_at')->index();
+        $table->timestamps();
+    });
 });
 
 afterEach(function () {
+    Schema::dropIfExists('auth_temporary_tokens');
     Schema::dropIfExists('personal_access_tokens');
     Schema::dropIfExists('Usuario');
 });
@@ -82,6 +93,47 @@ test('requiere aceptar los términos y condiciones', function () {
         ->assertJsonPath('errors.terminos_aceptados.0', 'Debes aceptar los términos y condiciones.');
 });
 
+test('registra la cuenta y consume el código de verificación de un solo uso', function () {
+    $correo = 'registro@gmail.com';
+    $tokenHash = hash('sha256', 'registro:'.$correo);
+
+    DB::table('auth_temporary_tokens')->insert([
+        'token_hash' => $tokenHash,
+        'purpose' => 'registro',
+        'payload' => json_encode([
+            'codigo' => Hash::make('123456'),
+            'datos' => [
+                'Nombre' => 'Mauricio',
+                'correo' => $correo,
+                'telefono' => '3214567890',
+                'contrasenha' => Hash::make('claveSegura123'),
+                'Roles_IDRol' => 3,
+                'terminos_aceptados' => true,
+            ],
+        ], JSON_THROW_ON_ERROR),
+        'attempts' => 0,
+        'expires_at' => now()->addMinutes(10),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $this->postJson('/api/registro/verify', [
+        'correo' => $correo,
+        'codigo' => '123456',
+    ])->assertCreated()
+        ->assertJsonPath('result', 'ok')
+        ->assertJsonPath('user.correo', $correo);
+
+    $this->assertDatabaseHas('Usuario', ['correo' => $correo]);
+    $this->assertDatabaseMissing('auth_temporary_tokens', ['token_hash' => $tokenHash]);
+
+    $this->postJson('/api/registro/verify', [
+        'correo' => $correo,
+        'codigo' => '123456',
+    ])->assertUnprocessable()
+        ->assertJsonPath('message', 'el codigo expiro, solicite uno nuevo');
+});
+
 test('rechaza un código de inicio social vencido o inválido', function () {
     $this->postJson('/api/auth/mobile/exchange', [
         'code' => str_repeat('x', 64),
@@ -99,11 +151,16 @@ test('canjea un código social de un solo uso por una sesión', function () {
         'terminos_aceptados' => true,
     ]);
     $code = str_repeat('a', 64);
-    Cache::put(
-        'social_login:'.hash('sha256', $code),
-        $user->getKey(),
-        now()->addMinute(),
-    );
+    $tokenHash = hash('sha256', 'social_login:'.$code);
+    DB::table('auth_temporary_tokens')->insert([
+        'token_hash' => $tokenHash,
+        'purpose' => 'social_login',
+        'payload' => json_encode(['user_id' => $user->getKey()], JSON_THROW_ON_ERROR),
+        'attempts' => 0,
+        'expires_at' => now()->addMinute(),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
 
     $this->postJson('/api/auth/mobile/exchange', ['code' => $code])
         ->assertOk()
@@ -111,7 +168,7 @@ test('canjea un código social de un solo uso por una sesión', function () {
         ->assertJsonPath('user.correo', 'andres@gmail.com')
         ->assertJsonStructure(['token']);
 
-    expect(Cache::has('social_login:'.hash('sha256', $code)))->toBeFalse();
+    $this->assertDatabaseMissing('auth_temporary_tokens', ['token_hash' => $tokenHash]);
 });
 
 test('prepara un registro social temporal con teléfono y términos aceptados', function () {
@@ -123,8 +180,11 @@ test('prepara un registro social temporal con teléfono y términos aceptados', 
 
     $registration = $response->json('registration');
     expect($registration)->toBeString();
-    expect(Cache::get('social_registration:'.hash('sha256', $registration)))
-        ->toBe(['telefono' => '3001234567']);
+    $this->assertDatabaseHas('auth_temporary_tokens', [
+        'token_hash' => hash('sha256', 'social_registration:'.$registration),
+        'purpose' => 'social_registration',
+        'payload' => json_encode(['telefono' => '3001234567'], JSON_THROW_ON_ERROR),
+    ]);
 });
 
 test('devuelve al móvil si el proveedor social no está configurado', function () {

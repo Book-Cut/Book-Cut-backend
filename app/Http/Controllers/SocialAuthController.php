@@ -7,7 +7,7 @@ use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
@@ -23,7 +23,11 @@ class SocialAuthController extends Controller
         if ($registrationId !== null) {
             if (
                 ! is_string($registrationId)
-                || ! is_array(Cache::get($this->registrationCacheKey($registrationId)))
+                || ! DB::table('auth_temporary_tokens')
+                    ->where('token_hash', $this->temporaryTokenHash('social_registration', $registrationId))
+                    ->where('purpose', 'social_registration')
+                    ->where('expires_at', '>', now())
+                    ->exists()
             ) {
                 return $this->redirectToApp(['error' => 'registration_expired']);
             }
@@ -88,7 +92,21 @@ class SocialAuthController extends Controller
         if (! $user) {
             $registrationId = $request->session()->pull('social_auth.registration');
             $registration = is_string($registrationId)
-                ? Cache::pull($this->registrationCacheKey($registrationId))
+                ? DB::transaction(function () use ($registrationId): ?array {
+                    $tokenHash = $this->temporaryTokenHash('social_registration', $registrationId);
+                    $record = DB::table('auth_temporary_tokens')
+                        ->where('token_hash', $tokenHash)
+                        ->where('purpose', 'social_registration')
+                        ->where('expires_at', '>', now())
+                        ->lockForUpdate()
+                        ->first();
+
+                    DB::table('auth_temporary_tokens')->where('token_hash', $tokenHash)->delete();
+
+                    return $record
+                        ? json_decode($record->payload, true, 512, JSON_THROW_ON_ERROR)
+                        : null;
+                })
                 : null;
 
             if (! is_array($registration)) {
@@ -117,16 +135,25 @@ class SocialAuthController extends Controller
         } else {
             $registrationId = $request->session()->pull('social_auth.registration');
             if (is_string($registrationId)) {
-                Cache::forget($this->registrationCacheKey($registrationId));
+                DB::table('auth_temporary_tokens')
+                    ->where('token_hash', $this->temporaryTokenHash('social_registration', $registrationId))
+                    ->where('purpose', 'social_registration')
+                    ->delete();
             }
         }
 
         $code = Str::random(64);
-        Cache::put(
-            $this->cacheKey($code),
-            $user->getKey(),
-            now()->addMinute(),
-        );
+        $now = now();
+        DB::table('auth_temporary_tokens')->where('expires_at', '<=', $now)->delete();
+        DB::table('auth_temporary_tokens')->insert([
+            'token_hash' => $this->temporaryTokenHash('social_login', $code),
+            'purpose' => 'social_login',
+            'payload' => json_encode(['user_id' => $user->getKey()], JSON_THROW_ON_ERROR),
+            'attempts' => 0,
+            'expires_at' => $now->copy()->addMinute(),
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
 
         return $this->redirectToApp(['code' => $code]);
     }
@@ -137,7 +164,26 @@ class SocialAuthController extends Controller
             'code' => 'required|string|min:32|max:128',
         ]);
 
-        $userId = Cache::pull($this->cacheKey($validated['code']));
+        $tokenHash = $this->temporaryTokenHash('social_login', $validated['code']);
+        $userId = DB::transaction(function () use ($tokenHash): ?int {
+            $record = DB::table('auth_temporary_tokens')
+                ->where('token_hash', $tokenHash)
+                ->where('purpose', 'social_login')
+                ->where('expires_at', '>', now())
+                ->lockForUpdate()
+                ->first();
+
+            DB::table('auth_temporary_tokens')->where('token_hash', $tokenHash)->delete();
+
+            if (! $record) {
+                return null;
+            }
+
+            $payload = json_decode($record->payload, true, 512, JSON_THROW_ON_ERROR);
+
+            return isset($payload['user_id']) ? (int) $payload['user_id'] : null;
+        });
+
         if (! $userId) {
             return response()->json([
                 'result' => 'error',
@@ -170,11 +216,17 @@ class SocialAuthController extends Controller
         ]);
 
         $registrationId = Str::random(64);
-        Cache::put(
-            $this->registrationCacheKey($registrationId),
-            ['telefono' => trim($validated['telefono'])],
-            now()->addMinutes(10),
-        );
+        $now = now();
+        DB::table('auth_temporary_tokens')->where('expires_at', '<=', $now)->delete();
+        DB::table('auth_temporary_tokens')->insert([
+            'token_hash' => $this->temporaryTokenHash('social_registration', $registrationId),
+            'purpose' => 'social_registration',
+            'payload' => json_encode(['telefono' => trim($validated['telefono'])], JSON_THROW_ON_ERROR),
+            'attempts' => 0,
+            'expires_at' => $now->copy()->addMinutes(10),
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
 
         return response()->json([
             'result' => 'ok',
@@ -182,14 +234,9 @@ class SocialAuthController extends Controller
         ]);
     }
 
-    private function cacheKey(string $code): string
+    private function temporaryTokenHash(string $purpose, string $token): string
     {
-        return 'social_login:'.hash('sha256', $code);
-    }
-
-    private function registrationCacheKey(string $registrationId): string
-    {
-        return 'social_registration:'.hash('sha256', $registrationId);
+        return hash('sha256', $purpose.':'.$token);
     }
 
     private function emailDomainAllowed(string $email): bool
