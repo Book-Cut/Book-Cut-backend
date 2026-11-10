@@ -64,8 +64,6 @@ class ServicioController extends Controller
             ], 422);
         }
         $servicio = Servicio::create($validator->validated());
-        $servicio = Servicio::create($validator->validated());
-
         return response()->json([
             'result' => 'ok',
             'message' => 'Servicio creado correctamente',

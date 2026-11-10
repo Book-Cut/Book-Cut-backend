@@ -926,9 +926,7 @@ class GestionCitasController extends Controller
         }
 
         $esCliente = $user->roles->Nombre_rol === 'Cliente';
-        $motivo = $request->validate([
-            'motivo' => ($esCliente ? 'nullable' : 'required') . '|string|max:255',
-        ])['motivo'] ?? null;
+        $motivo = trim($request->validate(['motivo' => 'nullable|string|max:255'])['motivo'] ?? '') ?: null;
 
         if ($esCliente) {
             if ((int) $cita->Usuario_idUsuarioCli !== (int) $user->idUsuario) {
@@ -937,8 +935,38 @@ class GestionCitasController extends Controller
             if (in_array($cita->estado, ['Cancelado', 'Finalizado'], true)) {
                 return response()->json(['result' => 'error', 'message' => 'Esta cita ya no se puede cancelar.'], 422);
             }
+        } elseif ($cita->Usuario_idUsuarioCli && in_array($cita->estado, ['Pendiente', 'Confirmado'], true)) {
+            
+        // se deja en espera la respuesta del cliente
+            if ($this->citaAfectadaPendiente($cita)) {
+                return response()->json(['result' => 'error', 'message' => 'Esta cita ya espera la respuesta del cliente.'], 422);
+            }
+            $cita->load(['cliente', 'barbero']);
+            $inicio = $this->inicioCita($cita);
+            $fin = $this->finCita($cita);
+            $bloqueo = indisponibilidad::create([
+                'Usuario_idUsuarioBar' => $cita->Usuario_idUsuarioBar,
+                'fecha' => $inicio->format('Y-m-d'),
+                'hora_inicio' => $inicio->format('H:i:s'),
+                'hora_fin' => $fin->format('Y-m-d') === $inicio->format('Y-m-d') ? $fin->format('H:i:s') : '23:59:59',
+                'motivo' => $motivo,
+                'Usuario_idUsuarioReg' => $user->idUsuario,
+            ]);
+
+            return response()->json([
+                'result' => 'ok',
+                'afectada' => true,
+                'correo_enviado' => citaAfectada::avisar($cita, $bloqueo->idIndisponibilidad, $motivo),
+            ]);
         }
 
+         if (!$esCliente && $cita->Usuario_idUsuarioCli && in_array($cita->estado, ['Pendiente', 'Confirmado'], true)) {
+            return $this->avisarCancelacionBarbero($cita, $user, $motivo);
+            }
+
+        
+
+        // Cliente, o cita sin cliente registrado: se cancela directo
         $cita->estado = 'Cancelado';
         $cita->confirmacion_solicitada_at = null;
         $cita->save();
@@ -950,32 +978,57 @@ class GestionCitasController extends Controller
         $cita->facturas()->update(['estado_factura' => 'Anulada']);
         $this->cerrarAfectada($cita->idCita, 'Cancelada');
 
-        $correoEnviado = false;
-        if (!$esCliente && $cita->Usuario_idUsuarioCli) {
-            $cita->load(['cliente', 'barbero']);
-            $mensaje = "Tu cita del {$cita->Fecha_hora} con {$cita->barbero->Nombre} fue cancelada. Motivo: {$motivo}.";
-
-            try {
-                notificacionWeb::create([
-                    'Usuario_idUsuario' => $cita->Usuario_idUsuarioCli,
-                    'titulo' => 'Tu cita fue cancelada',
-                    'mensaje' => $mensaje,
-                ]);
-            } catch (\Throwable $e) {
-                report($e);
-            }
-
-            try {
-                Mail::raw("Hola {$cita->cliente->Nombre},\n\n$mensaje", fn ($m) =>
-                    $m->to($cita->cliente->correo)->subject('Tu cita en Book&Cut fue cancelada'));
-                $correoEnviado = true;
-            } catch (\Throwable $e) {
-                report($e);
-            }
-        }
-
-        return response()->json(['result' => 'ok', 'message' => 'cita eliminada', 'correo_enviado' => $correoEnviado]);
+        return response()->json(['result' => 'ok', 'message' => 'cita eliminada']);
     }
+
+    private function avisarCancelacionBarbero(Citas $cita, $user, ?string $motivo)
+{
+    if ($this->citaAfectadaPendiente($cita)) {
+        return response()->json(['result' => 'error', 'message' => 'Esta cita ya espera la respuesta del cliente.'], 422);
+    }
+
+    $cita->load(['cliente', 'barbero', 'servicios']);
+    $inicio = $this->inicioCita($cita);
+    $fin = $this->finCita($cita);
+    $mensaje = "Tu cita del {$inicio->format('Y-m-d H:i')} con {$cita->barbero->Nombre} no podrá realizarse."
+        . ($motivo ? " Motivo: $motivo." : '')
+        . ' Entra a Mis citas para reagendarla o cancelarla.';
+
+    DB::transaction(function () use ($cita, $user, $motivo, $inicio, $fin, $mensaje) {
+        $bloqueo = indisponibilidad::create([
+            'Usuario_idUsuarioBar' => $cita->Usuario_idUsuarioBar,
+            'fecha' => $inicio->format('Y-m-d'),
+            'hora_inicio' => $inicio->format('H:i:s'),
+            'hora_fin' => $fin->format('H:i:s'),
+            'motivo' => $motivo,
+            'Usuario_idUsuarioReg' => $user->idUsuario,
+        ]);
+        $afectada = citaAfectada::create([
+            'Cita_idCita' => $cita->idCita,
+            'Indisponibilidad_id' => $bloqueo->idIndisponibilidad,
+        ]);
+        notificacionWeb::create([
+            'Usuario_idUsuario' => $cita->Usuario_idUsuarioCli,
+            'CitaAfectada_id' => $afectada->idCitaAfectada,
+            'titulo' => 'Tu cita fue afectada',
+            'mensaje' => $mensaje,
+        ]);
+    });
+
+    $enlace = rtrim(explode('#', config('app.frontend_url'))[0], '/') . '/#/mis-citas';
+    $correoEnviado = false;
+    try {
+        Mail::raw(
+            "Hola {$cita->cliente->Nombre},\n\n$mensaje\n\nReagenda o cancela aquí: $enlace",
+            fn ($m) => $m->to($cita->cliente->correo)->subject('Tu cita en Book&Cut fue afectada'),
+        );
+        $correoEnviado = true;
+    } catch (\Throwable $e) {
+        report($e);
+    }
+
+    return response()->json(['result' => 'ok', 'message' => 'Cliente avisado', 'afectada' => true, 'correo_enviado' => $correoEnviado]);
+}
 
     private function estaDentroDelPlazoMinimo(Citas $cita): bool
     {
@@ -983,6 +1036,13 @@ class GestionCitasController extends Controller
 
         return $this->inicioCita($cita) > $limite->toDateTimeImmutable();
 
+    }
+
+    private function inicioCita(Citas $cita): DateTimeImmutable
+    {
+        $servicios = $this->serviciosProgramados($cita);
+
+        return $servicios[0]['inicio'] ?? new DateTimeImmutable($cita->Fecha_hora);
     }
 
     private function citaAfectadaPendiente (Citas $cita): bool

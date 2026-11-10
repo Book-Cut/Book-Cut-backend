@@ -41,3 +41,4 @@ class CitasController extends Controller
         return response()->json(['result' => 'error', 'message' => 'sin permisos'], 403);
     }
 }
+

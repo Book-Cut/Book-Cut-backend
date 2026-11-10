@@ -1,5 +1,4 @@
 <?php
-
 use App\Http\Controllers\api\AutenticacionController;
 use App\Http\Controllers\api\BeneficiosController;
 use App\Http\Controllers\api\CitaAfectadaController;
@@ -36,7 +35,7 @@ Route::get('/servicios', [ServicioController::class, 'index']);
 Route::get('/barberos', [usuarioController::class, 'barberos']);
 Route::get('/beneficios-vigentes', [BeneficiosController::class, 'vigentes']);
 
-Route::post('/indisponibilidad', [IndisponibilidadController::class, 'store']);
+
 
 Route::get('/notificaciones', [NotificacionWebController::class, 'index']);
 Route::post('/notificaciones/{id}/leida', [NotificacionWebController::class, 'marcarLeida']);
@@ -73,6 +72,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/perfil', [PerfilController::class, 'show']);
     Route::patch('/perfil', [PerfilController::class, 'update']);
     Route::post('/perfil/foto', [PerfilController::class, 'actualizarFoto']);
+    Route::post('/indisponibilidad', [IndisponibilidadController::class, 'store']);
 
     Route::apiResource('usuarios', usuarioController::class)->except(['store']);
 
@@ -103,5 +103,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:1')->post('/facturas', [FacturaController::class, 'store']);
     Route::middleware('role:1')->put('/facturas/{id}', [FacturaController::class, 'update']);
     Route::middleware('role:1')->delete('/facturas/{id}', [FacturaController::class, 'destroy']);
+
 
 });
