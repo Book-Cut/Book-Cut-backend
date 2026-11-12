@@ -39,8 +39,8 @@ class SocialAuthController extends Controller
                 : null;
 
             if (
-                ! is_string($registrationId)
-                || ! $registration
+                !is_string($registrationId)
+                || !$registration
             ) {
                 return $this->redirectToApp(['error' => 'registration_expired']);
             }
@@ -49,7 +49,7 @@ class SocialAuthController extends Controller
             $request->session()->put('social_auth.registration', $registrationId);
             $request->session()->put(
                 'social_auth.request_google_phone',
-                ! is_array($registrationPayload) || empty($registrationPayload['telefono']),
+                !is_array($registrationPayload) || empty($registrationPayload['telefono']),
             );
         } else {
             $request->session()->forget('social_auth.registration');
@@ -57,8 +57,8 @@ class SocialAuthController extends Controller
         }
 
         if (
-            ! config("services.{$provider}.client_id")
-            || ! config("services.{$provider}.client_secret")
+            !config("services.{$provider}.client_id")
+            || !config("services.{$provider}.client_secret")
         ) {
             return $this->redirectToApp(['error' => 'provider_not_configured']);
         }
@@ -98,13 +98,13 @@ class SocialAuthController extends Controller
         }
 
         $email = strtolower(trim((string) $socialUser->getEmail()));
-        if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return $this->redirectToApp(['error' => 'email_unavailable']);
         }
 
         if (
             $provider === 'google'
-            && ! filter_var(
+            && !filter_var(
                 $socialUser->user['email_verified'] ?? false,
                 FILTER_VALIDATE_BOOLEAN,
             )
@@ -113,7 +113,7 @@ class SocialAuthController extends Controller
         }
 
         $user = usuario::where('correo', $email)->first();
-        if (! $user) {
+        if (!$user) {
             $registrationId = $request->session()->pull('social_auth.registration');
             $registration = is_string($registrationId)
                 ? DB::transaction(function () use ($registrationId): ?array {
@@ -133,11 +133,11 @@ class SocialAuthController extends Controller
                 })
                 : null;
 
-            if (! is_array($registration)) {
+            if (!is_array($registration)) {
                 return $this->redirectToApp(['error' => 'account_not_found']);
             }
 
-            if (! $this->emailDomainAllowed($email)) {
+            if (!$this->emailDomainAllowed($email)) {
                 return $this->redirectToApp(['error' => 'email_domain_not_allowed']);
             }
 
@@ -204,7 +204,7 @@ class SocialAuthController extends Controller
 
             DB::table('auth_temporary_tokens')->where('token_hash', $tokenHash)->delete();
 
-            if (! $record) {
+            if (!$record) {
                 return null;
             }
 
@@ -213,7 +213,7 @@ class SocialAuthController extends Controller
             return isset($payload['user_id']) ? (int) $payload['user_id'] : null;
         });
 
-        if (! $userId) {
+        if (!$userId) {
             return response()->json([
                 'result' => 'error',
                 'message' => 'El inicio de sesión expiró. Inténtalo de nuevo.',
@@ -221,7 +221,7 @@ class SocialAuthController extends Controller
         }
 
         $user = usuario::find($userId);
-        if (! $user) {
+        if (!$user) {
             return response()->json([
                 'result' => 'error',
                 'message' => 'No se encontró la cuenta asociada.',
@@ -267,7 +267,7 @@ class SocialAuthController extends Controller
 
     private function temporaryTokenHash(string $purpose, string $token): string
     {
-        return hash('sha256', $purpose.':'.$token);
+        return hash('sha256', $purpose . ':' . $token);
     }
 
     private function emailDomainAllowed(string $email): bool
@@ -279,7 +279,7 @@ class SocialAuthController extends Controller
 
     private function googlePhoneNumber(SocialiteUser $socialUser): ?string
     {
-        if (! is_string($socialUser->token) || $socialUser->token === '') {
+        if (!is_string($socialUser->token) || $socialUser->token === '') {
             return null;
         }
 
@@ -291,18 +291,18 @@ class SocialAuthController extends Controller
                     'personFields' => 'phoneNumbers',
                 ]);
 
-            if (! $response->successful()) {
+            if (!$response->successful()) {
                 return null;
             }
 
             $phoneNumbers = $response->json('phoneNumbers', []);
-            if (! is_array($phoneNumbers)) {
+            if (!is_array($phoneNumbers)) {
                 return null;
             }
 
             usort(
                 $phoneNumbers,
-                static fn (array $left, array $right): int => (int) data_get($right, 'metadata.primary', false)
+                static fn(array $left, array $right): int => (int) data_get($right, 'metadata.primary', false)
                     <=> (int) data_get($left, 'metadata.primary', false),
             );
 
@@ -322,16 +322,26 @@ class SocialAuthController extends Controller
     private function redirectToApp(array $parameters): RedirectResponse
     {
         if (session('social_auth.client') === 'web') {
-            $frontendUrl = rtrim((string) config('services.frontend_url'), '/')
-                .'/'.trim((string) config('services.frontend_path', '/DIST-FRONT'), '/');
+            $frontendHost = parse_url((string) config('services.frontend_url'), PHP_URL_HOST);
+            $apiHost = parse_url((string) config('app.url'), PHP_URL_HOST);
+            $frontendBase = $frontendHost && $frontendHost !== $apiHost
+                ? rtrim((string) config('services.frontend_url'), '/')
+                : 'https://book-cut.github.io';
+            $frontendPath = trim((string) config('services.frontend_path', '/DIST-FRONT'), '/');
+
+            if ($frontendPath === '' || $frontendPath === 'public' || str_starts_with($frontendPath, 'public/')) {
+                $frontendPath = 'DIST-FRONT';
+            }
+
+            $frontendUrl = $frontendBase . '/' . $frontendPath;
 
             return redirect()->away(
-                $frontendUrl.'/#/auth/google/callback?'.http_build_query($parameters),
+                $frontendUrl . '/#/auth/google/callback?' . http_build_query($parameters),
             );
         }
 
         return redirect()->away(
-            self::MOBILE_CALLBACK_URI.'?'.http_build_query($parameters),
+            self::MOBILE_CALLBACK_URI . '?' . http_build_query($parameters),
         );
     }
 }

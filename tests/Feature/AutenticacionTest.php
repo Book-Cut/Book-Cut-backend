@@ -217,3 +217,14 @@ test('devuelve al móvil si el proveedor social no está configurado', function 
     $this->get('/api/auth/google/redirect')
         ->assertRedirect('bookcut://oauth/callback?error=provider_not_configured');
 });
+
+test('redirige al origen del frontend web sin agregar el directorio público', function () {
+    config([
+        'services.frontend_url' => 'https://bookcut.api.adsocidm.com/public',
+        'services.frontend_path' => '/DIST-FRONT',
+    ]);
+
+    $this->withSession(['social_auth.client' => 'web'])
+        ->get('/api/auth/google/callback?error=access_denied')
+        ->assertRedirect('https://bookcut.api.adsocidm.com/#/auth/google/callback?error=cancelled');
+});

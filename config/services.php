@@ -44,11 +44,11 @@ return [
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env(
             'GOOGLE_REDIRECT_URI',
-            rtrim(env('APP_URL', 'http://localhost'), '/').'/api/auth/google/callback',
+            rtrim(env('APP_URL', 'http://localhost'), '/') . '/api/auth/google/callback',
         ),
     ],
 
-    'frontend_url' => env('FRONTEND_URL', rtrim(env('APP_URL', 'http://localhost'), '/')),
+    'frontend_url' => env('FRONTEND_URL', 'https://book-cut.github.io'),
     'frontend_path' => env('FRONTEND_PATH', '/DIST-FRONT'),
 
 ];
