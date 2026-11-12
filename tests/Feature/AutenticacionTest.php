@@ -12,7 +12,7 @@ beforeEach(function () {
         $table->id('idUsuario');
         $table->string('Nombre');
         $table->string('correo')->unique();
-        $table->string('telefono');
+        $table->string('telefono')->nullable();
         $table->string('contrasenha');
         $table->unsignedBigInteger('Roles_IDRol')->default(3);
         $table->boolean('terminos_aceptados')->default(false);
@@ -95,7 +95,7 @@ test('requiere aceptar los términos y condiciones', function () {
 
 test('registra la cuenta y consume el código de verificación de un solo uso', function () {
     $correo = 'registro@gmail.com';
-    $tokenHash = hash('sha256', 'registro:' . $correo);
+    $tokenHash = hash('sha256', 'registro:'.$correo);
 
     DB::table('auth_temporary_tokens')->insert([
         'token_hash' => $tokenHash,
@@ -151,7 +151,7 @@ test('canjea un código social de un solo uso por una sesión', function () {
         'terminos_aceptados' => true,
     ]);
     $code = str_repeat('a', 64);
-    $tokenHash = hash('sha256', 'social_login:' . $code);
+    $tokenHash = hash('sha256', 'social_login:'.$code);
     DB::table('auth_temporary_tokens')->insert([
         'token_hash' => $tokenHash,
         'purpose' => 'social_login',
@@ -181,10 +181,31 @@ test('prepara un registro social temporal con teléfono y términos aceptados', 
     $registration = $response->json('registration');
     expect($registration)->toBeString();
     $this->assertDatabaseHas('auth_temporary_tokens', [
-        'token_hash' => hash('sha256', 'social_registration:' . $registration),
+        'token_hash' => hash('sha256', 'social_registration:'.$registration),
         'purpose' => 'social_registration',
         'payload' => json_encode(['telefono' => '3001234567'], JSON_THROW_ON_ERROR),
     ]);
+});
+
+test('prepara un registro social sin teléfono si acepta los términos', function () {
+    $response = $this->postJson('/api/auth/mobile/social/register', [
+        'terminos_aceptados' => true,
+    ])->assertOk()
+        ->assertJsonPath('result', 'ok');
+
+    $registration = $response->json('registration');
+    $this->assertDatabaseHas('auth_temporary_tokens', [
+        'token_hash' => hash('sha256', 'social_registration:'.$registration),
+        'purpose' => 'social_registration',
+        'payload' => json_encode(['telefono' => null], JSON_THROW_ON_ERROR),
+    ]);
+});
+
+test('no prepara un registro social si no acepta los términos', function () {
+    $this->postJson('/api/auth/mobile/social/register', [
+        'terminos_aceptados' => false,
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors('terminos_aceptados');
 });
 
 test('devuelve al móvil si el proveedor social no está configurado', function () {
