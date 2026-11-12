@@ -7,9 +7,10 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::prefix('api/auth')->group(function () {
-    Route::get('/{provider}/redirect', [SocialAuthController::class, 'redirect'])
-        ->whereIn('provider', ['google']);
-    Route::get('/{provider}/callback', [SocialAuthController::class, 'callback'])
-        ->whereIn('provider', ['google']);
-});
+Route::get('/api/auth/google/redirect', [SocialAuthController::class, 'redirect'])
+    ->defaults('provider', 'google')
+    ->name('auth.google.redirect');
+
+Route::get('/api/auth/google/callback', [SocialAuthController::class, 'callback'])
+    ->defaults('provider', 'google')
+    ->name('auth.google.callback');
