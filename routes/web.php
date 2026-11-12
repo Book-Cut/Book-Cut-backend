@@ -9,7 +9,7 @@ Route::get('/', function () {
 
 Route::prefix('api/auth')->group(function () {
     Route::get('/{provider}/redirect', [SocialAuthController::class, 'redirect'])
-        ->whereIn('provider', ['google', 'facebook']);
+        ->whereIn('provider', ['google']);
     Route::get('/{provider}/callback', [SocialAuthController::class, 'callback'])
-        ->whereIn('provider', ['google', 'facebook']);
+        ->whereIn('provider', ['google']);
 });

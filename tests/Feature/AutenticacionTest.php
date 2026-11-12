@@ -5,7 +5,6 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\DB;
 
 beforeEach(function () {
     Schema::dropIfExists('Usuario');
@@ -96,7 +95,7 @@ test('requiere aceptar los términos y condiciones', function () {
 
 test('registra la cuenta y consume el código de verificación de un solo uso', function () {
     $correo = 'registro@gmail.com';
-    $tokenHash = hash('sha256', 'registro:'.$correo);
+    $tokenHash = hash('sha256', 'registro:' . $correo);
 
     DB::table('auth_temporary_tokens')->insert([
         'token_hash' => $tokenHash,
@@ -152,7 +151,7 @@ test('canjea un código social de un solo uso por una sesión', function () {
         'terminos_aceptados' => true,
     ]);
     $code = str_repeat('a', 64);
-    $tokenHash = hash('sha256', 'social_login:'.$code);
+    $tokenHash = hash('sha256', 'social_login:' . $code);
     DB::table('auth_temporary_tokens')->insert([
         'token_hash' => $tokenHash,
         'purpose' => 'social_login',
@@ -182,7 +181,7 @@ test('prepara un registro social temporal con teléfono y términos aceptados', 
     $registration = $response->json('registration');
     expect($registration)->toBeString();
     $this->assertDatabaseHas('auth_temporary_tokens', [
-        'token_hash' => hash('sha256', 'social_registration:'.$registration),
+        'token_hash' => hash('sha256', 'social_registration:' . $registration),
         'purpose' => 'social_registration',
         'payload' => json_encode(['telefono' => '3001234567'], JSON_THROW_ON_ERROR),
     ]);
