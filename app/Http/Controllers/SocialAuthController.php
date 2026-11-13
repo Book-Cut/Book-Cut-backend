@@ -114,6 +114,10 @@ class SocialAuthController extends Controller
 
         $user = usuario::where('correo', $email)->first();
         if (!$user) {
+            if (!$this->emailDomainAllowed($email)) {
+                return $this->redirectToApp(['error' => 'email_domain_not_allowed']);
+            }
+
             $nombre = trim((string) $socialUser->getName());
             if ($nombre === '') {
                 $nombre = strstr($email, '@', true) ?: $email;
@@ -139,17 +143,9 @@ class SocialAuthController extends Controller
                 : null;
 
             if (!is_array($registration)) {
-                if (session('social_auth.client') === 'web') {
-                    return $this->redirectToApp([
-                        'signup_token' => $this->createGoogleSignupToken($email, $nombre),
-                    ]);
-                }
-
-                return $this->redirectToApp(['error' => 'account_not_found']);
-            }
-
-            if (!$this->emailDomainAllowed($email)) {
-                return $this->redirectToApp(['error' => 'email_domain_not_allowed']);
+                return $this->redirectToApp([
+                    'signup_token' => $this->createGoogleSignupToken($email, $nombre),
+                ]);
             }
 
             $telefono = trim((string) ($registration['telefono'] ?? ''));
