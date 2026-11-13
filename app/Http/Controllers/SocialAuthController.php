@@ -114,6 +114,11 @@ class SocialAuthController extends Controller
 
         $user = usuario::where('correo', $email)->first();
         if (!$user) {
+            $nombre = trim((string) $socialUser->getName());
+            if ($nombre === '') {
+                $nombre = strstr($email, '@', true) ?: $email;
+            }
+
             $registrationId = $request->session()->pull('social_auth.registration');
             $registration = is_string($registrationId)
                 ? DB::transaction(function () use ($registrationId): ?array {
@@ -134,16 +139,17 @@ class SocialAuthController extends Controller
                 : null;
 
             if (!is_array($registration)) {
+                if (session('social_auth.client') === 'web') {
+                    return $this->redirectToApp([
+                        'signup_token' => $this->createGoogleSignupToken($email, $nombre),
+                    ]);
+                }
+
                 return $this->redirectToApp(['error' => 'account_not_found']);
             }
 
             if (!$this->emailDomainAllowed($email)) {
                 return $this->redirectToApp(['error' => 'email_domain_not_allowed']);
-            }
-
-            $nombre = trim((string) $socialUser->getName());
-            if ($nombre === '') {
-                $nombre = strstr($email, '@', true) ?: $email;
             }
 
             $telefono = trim((string) ($registration['telefono'] ?? ''));
@@ -171,20 +177,62 @@ class SocialAuthController extends Controller
             }
         }
 
-        $code = Str::random(64);
-        $now = now();
-        DB::table('auth_temporary_tokens')->where('expires_at', '<=', $now)->delete();
-        DB::table('auth_temporary_tokens')->insert([
-            'token_hash' => $this->temporaryTokenHash('social_login', $code),
-            'purpose' => 'social_login',
-            'payload' => json_encode(['user_id' => $user->getKey()], JSON_THROW_ON_ERROR),
-            'attempts' => 0,
-            'expires_at' => $now->copy()->addMinute(),
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
+        $code = $this->createSocialLoginCode($user);
 
         return $this->redirectToApp(['code' => $code]);
+    }
+
+    public function completeGoogleRegistration(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'signup_token' => 'required|string|size:64',
+            'telefono' => 'nullable|string|max:45',
+            'terminos_aceptados' => 'required|accepted',
+        ]);
+
+        $tokenHash = $this->temporaryTokenHash('google_signup', $validated['signup_token']);
+        $user = DB::transaction(function () use ($tokenHash, $validated): ?usuario {
+            $record = DB::table('auth_temporary_tokens')
+                ->where('token_hash', $tokenHash)
+                ->where('purpose', 'google_signup')
+                ->where('expires_at', '>', now())
+                ->lockForUpdate()
+                ->first();
+
+            if (!$record) {
+                return null;
+            }
+
+            $identity = json_decode($record->payload, true, 512, JSON_THROW_ON_ERROR);
+            DB::table('auth_temporary_tokens')->where('token_hash', $tokenHash)->delete();
+
+            if (!is_array($identity) || !filter_var($identity['correo'] ?? null, FILTER_VALIDATE_EMAIL)) {
+                return null;
+            }
+
+            return usuario::firstOrCreate(
+                ['correo' => strtolower(trim($identity['correo']))],
+                [
+                    'Nombre' => mb_substr(trim((string) ($identity['Nombre'] ?? 'Usuario')), 0, 255),
+                    'telefono' => isset($validated['telefono']) ? trim($validated['telefono']) : null,
+                    'contrasenha' => Hash::make(Str::random(64)),
+                    'Roles_IDRol' => 3,
+                    'terminos_aceptados' => true,
+                ],
+            );
+        });
+
+        if (!$user) {
+            return response()->json([
+                'result' => 'error',
+                'message' => 'El registro expiró. Vuelve a iniciar con Google.',
+            ], 410);
+        }
+
+        return response()->json([
+            'result' => 'ok',
+            'code' => $this->createSocialLoginCode($user),
+        ]);
     }
 
     public function exchange(Request $request): JsonResponse
@@ -263,6 +311,47 @@ class SocialAuthController extends Controller
             'result' => 'ok',
             'registration' => $registrationId,
         ]);
+    }
+
+    private function createGoogleSignupToken(string $email, string $name): string
+    {
+        $token = Str::random(64);
+        $now = now();
+
+        DB::table('auth_temporary_tokens')->where('expires_at', '<=', $now)->delete();
+        DB::table('auth_temporary_tokens')->insert([
+            'token_hash' => $this->temporaryTokenHash('google_signup', $token),
+            'purpose' => 'google_signup',
+            'payload' => json_encode([
+                'correo' => $email,
+                'Nombre' => $name,
+            ], JSON_THROW_ON_ERROR),
+            'attempts' => 0,
+            'expires_at' => $now->copy()->addMinutes(10),
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        return $token;
+    }
+
+    private function createSocialLoginCode(usuario $user): string
+    {
+        $code = Str::random(64);
+        $now = now();
+
+        DB::table('auth_temporary_tokens')->where('expires_at', '<=', $now)->delete();
+        DB::table('auth_temporary_tokens')->insert([
+            'token_hash' => $this->temporaryTokenHash('social_login', $code),
+            'purpose' => 'social_login',
+            'payload' => json_encode(['user_id' => $user->getKey()], JSON_THROW_ON_ERROR),
+            'attempts' => 0,
+            'expires_at' => $now->copy()->addMinute(),
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        return $code;
     }
 
     private function temporaryTokenHash(string $purpose, string $token): string

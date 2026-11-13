@@ -95,7 +95,7 @@ test('requiere aceptar los términos y condiciones', function () {
 
 test('registra la cuenta y consume el código de verificación de un solo uso', function () {
     $correo = 'registro@gmail.com';
-    $tokenHash = hash('sha256', 'registro:'.$correo);
+    $tokenHash = hash('sha256', 'registro:' . $correo);
 
     DB::table('auth_temporary_tokens')->insert([
         'token_hash' => $tokenHash,
@@ -151,7 +151,7 @@ test('canjea un código social de un solo uso por una sesión', function () {
         'terminos_aceptados' => true,
     ]);
     $code = str_repeat('a', 64);
-    $tokenHash = hash('sha256', 'social_login:'.$code);
+    $tokenHash = hash('sha256', 'social_login:' . $code);
     DB::table('auth_temporary_tokens')->insert([
         'token_hash' => $tokenHash,
         'purpose' => 'social_login',
@@ -181,7 +181,7 @@ test('prepara un registro social temporal con teléfono y términos aceptados', 
     $registration = $response->json('registration');
     expect($registration)->toBeString();
     $this->assertDatabaseHas('auth_temporary_tokens', [
-        'token_hash' => hash('sha256', 'social_registration:'.$registration),
+        'token_hash' => hash('sha256', 'social_registration:' . $registration),
         'purpose' => 'social_registration',
         'payload' => json_encode(['telefono' => '3001234567'], JSON_THROW_ON_ERROR),
     ]);
@@ -195,7 +195,7 @@ test('prepara un registro social sin teléfono si acepta los términos', functio
 
     $registration = $response->json('registration');
     $this->assertDatabaseHas('auth_temporary_tokens', [
-        'token_hash' => hash('sha256', 'social_registration:'.$registration),
+        'token_hash' => hash('sha256', 'social_registration:' . $registration),
         'purpose' => 'social_registration',
         'payload' => json_encode(['telefono' => null], JSON_THROW_ON_ERROR),
     ]);
@@ -203,6 +203,46 @@ test('prepara un registro social sin teléfono si acepta los términos', functio
 
 test('no prepara un registro social si no acepta los términos', function () {
     $this->postJson('/api/auth/mobile/social/register', [
+        'terminos_aceptados' => false,
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors('terminos_aceptados');
+});
+
+test('crea una cuenta Google solo después de aceptar términos y permite dejar teléfono pendiente', function () {
+    $signupToken = str_repeat('g', 64);
+    DB::table('auth_temporary_tokens')->insert([
+        'token_hash' => hash('sha256', 'google_signup:' . $signupToken),
+        'purpose' => 'google_signup',
+        'payload' => json_encode([
+            'correo' => 'nuevo@gmail.com',
+            'Nombre' => 'Nueva Cuenta',
+        ], JSON_THROW_ON_ERROR),
+        'attempts' => 0,
+        'expires_at' => now()->addMinutes(10),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $response = $this->postJson('/api/auth/google/complete-registration', [
+        'signup_token' => $signupToken,
+        'terminos_aceptados' => true,
+    ])->assertOk()
+        ->assertJsonPath('result', 'ok')
+        ->assertJsonStructure(['code']);
+
+    $this->assertDatabaseHas('Usuario', [
+        'correo' => 'nuevo@gmail.com',
+        'telefono' => null,
+        'terminos_aceptados' => true,
+    ]);
+    $this->assertDatabaseMissing('auth_temporary_tokens', [
+        'token_hash' => hash('sha256', 'google_signup:' . $signupToken),
+    ]);
+});
+
+test('no completa un registro Google si no acepta los términos', function () {
+    $this->postJson('/api/auth/google/complete-registration', [
+        'signup_token' => str_repeat('g', 64),
         'terminos_aceptados' => false,
     ])->assertUnprocessable()
         ->assertJsonValidationErrors('terminos_aceptados');
@@ -218,7 +258,7 @@ test('devuelve al móvil si el proveedor social no está configurado', function 
         ->assertRedirect('bookcut://oauth/callback?error=provider_not_configured');
 });
 
-test('redirige al origen del frontend web sin agregar el directorio público', function () {
+test('redirige al frontend web publicado si la configuración apunta al host de la API', function () {
     config([
         'services.frontend_url' => 'https://bookcut.api.adsocidm.com/public',
         'services.frontend_path' => '/DIST-FRONT',
@@ -226,5 +266,5 @@ test('redirige al origen del frontend web sin agregar el directorio público', f
 
     $this->withSession(['social_auth.client' => 'web'])
         ->get('/api/auth/google/callback?error=access_denied')
-        ->assertRedirect('https://bookcut.api.adsocidm.com/#/auth/google/callback?error=cancelled');
+        ->assertRedirect('https://book-cut.github.io/DIST-FRONT/#/auth/google/callback?error=cancelled');
 });
