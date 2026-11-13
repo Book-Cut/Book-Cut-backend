@@ -21,6 +21,7 @@ class SocialAuthController extends Controller
 
     public function redirect(Request $request, string $provider): RedirectResponse
     {
+        
         $registrationId = $request->query('registration');
         if ($registrationId !== null) {
             if (
